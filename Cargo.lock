@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "aptos-trader"
+name = "aptos-network-sdk"
 version = "0.1.0"
