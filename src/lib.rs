@@ -1,4 +1,6 @@
 pub mod contract;
+pub mod event;
+pub mod multicall;
 pub mod trade;
 pub mod types;
 pub mod wallet;
@@ -40,6 +42,12 @@ impl AptosClient {
             client: Client::new(),
             base_url,
         }
+    }
+
+    /// get chain height
+    pub async fn get_chain_height(&self) -> Result<u64, String> {
+        let chain_info = self.get_chain_info().await?;
+        Ok(chain_info.ledger_version.parse::<u64>().unwrap_or(0))
     }
 
     /// get account info
@@ -314,7 +322,7 @@ impl AptosClient {
         let gas_estimation: GasEstimation = response.json().await.unwrap();
         Ok(gas_estimation.gas_estimate * 2000)
     }
-    
+
     /// get account balance
     pub async fn get_account_balance(&self, address: &str) -> Result<u64, String> {
         let resources = self.get_account_resource_vec(address).await.unwrap();

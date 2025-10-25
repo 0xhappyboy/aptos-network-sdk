@@ -1,10 +1,17 @@
-use crate::{AptosClient, types::EntryFunctionPayload, wallet::Wallet};
+use crate::{
+    AptosClient,
+    types::{ContractCall, EntryFunctionPayload},
+    wallet::Wallet,
+};
 use aptos_network_tool::{address::address_to_bytes, signature::serialize_transaction_and_sign};
+use futures::future::join_all;
 use serde_json::{Value, json};
 use std::{
+    collections::HashMap,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
+use tokio::sync::Semaphore;
 
 pub struct Trade;
 
@@ -53,7 +60,7 @@ impl Trade {
         });
         Ok(raw_txn)
     }
-    
+
     /// build token transfer
     pub async fn create_token_transfer_tx(
         client: Arc<AptosClient>,
@@ -251,5 +258,73 @@ impl Trade {
                 "signature": hex::encode(signature)
             }
         }))
+    }
+}
+
+/// batch transaction processor
+pub struct BatchTradeHandle;
+
+impl BatchTradeHandle {
+    /// Processing batch transactions with concurrency control
+    pub async fn process_batch(
+        client: Arc<AptosClient>,
+        wallet: Arc<Wallet>,
+        calls: Vec<ContractCall>,
+        concurrency: usize,
+    ) -> Result<Vec<Value>, String> {
+        let semaphore = Arc::new(Semaphore::new(concurrency));
+        let mut tasks = Vec::new();
+        for call in calls {
+            let client_clone = Arc::clone(&client);
+            let wallet_clone = Arc::clone(&wallet);
+            let semaphore_clone = Arc::clone(&semaphore);
+
+            let task = async move {
+                let _permit = semaphore_clone.acquire().await.map_err(|e| e.to_string())?;
+                match crate::contract::Contract::write(client_clone, wallet_clone, call).await {
+                    Ok(result) => Ok(json!(result)),
+                    Err(e) => Err(e),
+                }
+            };
+            tasks.push(task);
+        }
+        let results = join_all(tasks).await;
+        let mut final_results = Vec::new();
+        for result in results {
+            match result {
+                Ok(value) => final_results.push(value),
+                Err(e) => final_results.push(json!({
+                    "success": false,
+                    "error": e
+                })),
+            }
+        }
+        Ok(final_results)
+    }
+
+    /// Read resources in batches
+    pub async fn batch_get_resources(
+        client: Arc<AptosClient>,
+        addresses: Vec<String>,
+        resource_types: Vec<&str>,
+    ) -> Result<HashMap<String, HashMap<String, Option<Value>>>, String> {
+        let mut all_results = HashMap::new();
+        for address in addresses {
+            match crate::contract::Contract::batch_get_resources(
+                Arc::clone(&client),
+                &address,
+                resource_types.clone(),
+            )
+            .await
+            {
+                Ok(resources) => {
+                    all_results.insert(address, resources);
+                }
+                Err(e) => {
+                    eprintln!("Failed to get resources for address: {}", e);
+                }
+            }
+        }
+        Ok(all_results)
     }
 }
