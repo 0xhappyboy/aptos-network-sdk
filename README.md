@@ -51,6 +51,170 @@ let result = Contract::read(Arc::clone(&client), &call).await?;
 println!("Contract result: {:?}", result.data);
 ```
 
+## Token
+
+### Creating and registering new tokens
+
+```rust
+ use crate::token::{TokenManager, TokenUtils};
+ use std::sync::Arc;
+ use crate::{
+    global::rpc::{APTOS_MAINNET_URL},
+    types::*,
+ };
+
+ async fn create_new_token() -> Result<(), String> {
+ let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
+ let wallet = Arc::new(Wallet::from_private_key("your_private_key"));
+ let result = TokenManager::create_token(
+     client.clone(),
+     wallet.clone(),
+     "My Token",
+     "MYT",
+     8,
+     1_000_000_000,
+ ).await?;
+
+ let token_type = TokenUtils::build_standard_token_type(
+     &wallet.address(),
+     "my_token",
+     "MYT"
+ );
+ let register_result = TokenManager::register_token(
+     client.clone(),
+     wallet.clone(),
+     &token_type,
+ ).await?;
+ Ok(())
+}
+```
+
+### Token minting and balance inquiry
+
+```rust
+use crate::{
+    global::rpc::{APTOS_MAINNET_URL},
+};
+
+async fn mint_and_check_balance() -> Result<(), String> {
+let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
+let wallet = Arc::new(Wallet::from_private_key("your_private_key"));
+    let token_type = "0x1::managed_coin::MYT";
+    let recipient = "0x123...";
+    let mint_result = TokenManager::mint_token(
+        client.clone(),
+        wallet.clone(),
+        token_type,
+        recipient,
+        100_000_000,
+    ).await?;
+    let balance = TokenManager::get_token_balance(
+        client.clone(),
+        recipient,
+        token_type,
+    ).await?;
+    Ok(())
+}
+```
+
+### Token search function
+
+```rust
+use crate::token::{TokenSearchManager, TokenSearchResult};
+use crate::{
+    global::rpc::{APTOS_MAINNET_URL},
+    types::*,
+};
+
+async fn search_tokens() -> Result<(), String> {
+    let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
+    let results = TokenSearchManager::get_token_by_symbol(
+        client.clone(),
+        "USDC",
+    ).await?;
+    let top_tokens = TokenSearchManager::get_top_token_vec(client.clone()).await?;
+    for token in top_tokens {
+       //..
+    }
+    Ok(())
+}
+```
+
+### Token tool usage
+
+```rust
+fn token_utils_examples() {
+    let token_type = TokenUtils::build_standard_token_type("0x1234567890abcdef","my_collection","MYT");
+    if let Some((creator, collection, name)) = TokenUtils::parse_token_type(&token_type) {
+    }
+    let address = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+}
+```
+
+### Get token trading pair information
+
+```rust
+use crate::{
+    global::rpc::{APTOS_MAINNET_URL},
+    types::*,
+};
+
+async fn get_trading_pairs() -> Result<(), String> {
+let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
+    let token_address = "0x1::aptos_coin::AptosCoin";
+    let trading_pairs = TokenSearchManager::get_token_trading_pairs(
+        client.clone(),
+        token_address,
+    ).await?;
+    for pair in trading_pairs {
+       // ...
+    }
+    Ok(())
+}
+```
+
+### Complete token management process
+
+```rust
+use crate::{
+    global::rpc::{APTOS_MAINNET_URL},
+    types::*,
+};
+
+async fn complete_token_lifecycle() -> Result<(), String> {
+    let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
+    let wallet = Arc::new(Wallet::from_private_key("your_private_key"));
+    TokenManager::create_token(
+        client.clone(),
+        wallet.clone(),
+        "Test Token",
+        "TEST",
+        6,
+        10_000_000,
+    ).await?;
+    let token_type = format!("{}::test_token::TEST", wallet.address());
+    // Register token
+    TokenManager::register_token(client.clone(), wallet.clone(), &token_type).await?;
+    // mint token
+    TokenManager::mint_token(
+        client.clone(),
+        wallet.clone(),
+        &token_type,
+        &wallet.address(),
+        1_000_000,
+    ).await?;
+    // Query token metadata
+    let metadata = TokenManager::get_token_metadata(client.clone(), &token_type).await?;
+    // Check balance
+    let balance = TokenManager::get_token_balance(
+        client.clone(),
+        &wallet.address(),
+        &token_type,
+    ).await?;
+    Ok(())
+}
+```
+
 ## Event
 
 ### Basic event listener

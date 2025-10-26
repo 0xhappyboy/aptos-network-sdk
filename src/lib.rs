@@ -1,18 +1,24 @@
 pub mod contract;
+pub mod dex;
 pub mod event;
+pub mod global;
 pub mod multicall;
 pub mod trade;
 pub mod types;
 pub mod wallet;
-use crate::types::*;
+pub mod token;
+pub mod nft;
+pub mod bridge;
+pub mod tool;
+pub mod staking;
+
+use crate::{
+    global::rpc::{APTOS_DEVNET_URL, APTOS_MAINNET_URL, APTOS_TESTNET_URL},
+    types::*,
+};
 use reqwest::Client;
 use serde_json::Value;
 use std::time::Duration;
-
-/// aptos rpc url
-const APTOS_MAINNET_URL: &str = "https://fullnode.mainnet.aptoslabs.com/v1";
-const APTOS_TESTNET_URL: &str = "https://fullnode.testnet.aptoslabs.com/v1";
-const APTOS_DEVNET_URL: &str = "https://fullnode.devnet.aptoslabs.com/v1";
 
 /// waiting transaction delay time
 const WAITING_TRANSACTION_DELAY_TIME: u64 = 500;

@@ -46,6 +46,222 @@ let result = Contract::read(Arc::clone(&client), &call).await?;
 println!("合约结果: {:?}", result.data);
 ```
 
+## 代币
+
+### 创建和注册新代币
+
+```rust
+use crate::token::{TokenManager, TokenUtils};
+use std::sync::Arc;
+use crate::{
+    global::rpc::{APTOS_MAINNET_URL},
+    types::*,
+};
+
+// 创建新代币
+async fn create_new_token() -> Result<(), String> {
+let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
+let wallet = Arc::new(Wallet::from_private_key("your_private_key"));
+
+ // 创建代币
+ let result = TokenManager::create_token(
+     client.clone(),
+     wallet.clone(),
+     "My Token",
+     "MYT",
+     8,
+     1_000_000_000, // 10亿个代币，考虑小数位
+ ).await?;
+
+ println!("代币创建成功: {:?}", result);
+
+ // 注册代币到当前账户
+ let token_type = TokenUtils::build_standard_token_type(
+     &wallet.address(),
+     "my_token",
+     "MYT"
+ );
+
+ let register_result = TokenManager::register_token(
+     client.clone(),
+     wallet.clone(),
+     &token_type,
+ ).await?;
+
+ println!("代币注册成功: {:?}", register_result);
+ Ok(())
+
+}
+```
+
+### 2. 代币铸造和余额查询
+
+```rust
+use crate::{
+    global::rpc::{APTOS_MAINNET_URL},
+};
+
+// 铸造代币并查询余额
+async fn mint_and_check_balance() -> Result<(), String> {
+let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
+let wallet = Arc::new(Wallet::from_private_key("your_private_key"));
+    let token_type = "0x1::managed_coin::MYT";
+    let recipient = "0x123...";
+    // 铸造代币
+    let mint_result = TokenManager::mint_token(
+        client.clone(),
+        wallet.clone(),
+        token_type,
+        recipient,
+        100_000_000, // 100个代币
+    ).await?;
+    println!("代币铸造成功: {:?}", mint_result);
+    // 查询余额
+    let balance = TokenManager::get_token_balance(
+        client.clone(),
+        recipient,
+        token_type,
+    ).await?;
+
+    println!("账户 {} 的余额: {}", recipient, balance);
+    Ok(())
+
+}
+```
+
+### 代币搜索功能
+
+```rust
+use crate::token::{TokenSearchManager, TokenSearchResult};
+use crate::{
+    global::rpc::{APTOS_MAINNET_URL},
+    types::*,
+};
+
+// 搜索代币
+async fn search_tokens() -> Result<(), String> {
+    let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
+
+    // 搜索 USDC 相关代币
+    let results = TokenSearchManager::get_token_by_symbol(
+        client.clone(),
+        "USDC",
+    ).await?;
+
+    println!("找到 {} 个 USDC 相关代币:", results.len());
+    for token in results {
+        println!("符号: {}, 地址: {}, 已验证: {}",
+            token.symbol, token.address, token.verified);
+    }
+
+    // 获取热门代币
+    let top_tokens = TokenSearchManager::get_top_token_vec(client.clone()).await?;
+    println!("热门代币:");
+    for token in top_tokens {
+        println!("{} - 价格: ${}, 24小时交易量: {}",
+            token.symbol, token.price, token.volume_24h);
+    }
+
+    Ok(())
+
+}
+```
+
+### 代币工具使用
+
+```rust
+// 代币工具使用示例
+fn token_utils_examples() {
+    // 构建标准代币类型
+    let token_type = TokenUtils::build_standard_token_type("0x1234567890abcdef","my_collection","MYT");
+    println!("代币类型: {}", token_type);
+    // 解析代币类型
+    if let Some((creator, collection, name)) = TokenUtils::parse_token_type(&token_type) {
+        println!("创建者: {}, 集合: {}, 名称: {}", creator, collection, name);
+    }
+    // 验证地址格式
+    let address = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
+    println!("地址有效: {}", TokenUtils::is_valid_token_address(address));
+}
+```
+
+### 获取代币交易对信息
+
+```rust
+use crate::{
+    global::rpc::{APTOS_MAINNET_URL},
+    types::*,
+};
+
+// 获取代币交易对
+async fn get_trading_pairs() -> Result<(), String> {
+let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
+    let token_address = "0x1::aptos_coin::AptosCoin";
+    let trading_pairs = TokenSearchManager::get_token_trading_pairs(
+        client.clone(),
+        token_address,
+    ).await?;
+    println!("APT 交易对:");
+    for pair in trading_pairs {
+        println!("{} - {} | DEX: {:?} | 流动性: {}",
+            pair.token_a, pair.token_b, pair.dexes, pair.total_liquidity);
+    }
+    Ok(())
+}
+```
+
+### 完整的代币管理流程
+
+```rust
+use crate::{
+    global::rpc::{APTOS_MAINNET_URL},
+    types::*,
+};
+
+// 完整的代币创建和管理流程
+async fn complete_token_lifecycle() -> Result<(), String> {
+    let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
+    let wallet = Arc::new(Wallet::from_private_key("your_private_key"));
+    // 创建代币
+    println!("创建代币...");
+    TokenManager::create_token(
+        client.clone(),
+        wallet.clone(),
+        "Test Token",
+        "TEST",
+        6,
+        10_000_000,
+    ).await?;
+    let token_type = format!("{}::test_token::TEST", wallet.address());
+    // 注册代币
+    println!("注册代币...");
+    TokenManager::register_token(client.clone(), wallet.clone(), &token_type).await?;
+    // 铸造代币
+    println!("铸造代币...");
+    TokenManager::mint_token(
+        client.clone(),
+        wallet.clone(),
+        &token_type,
+        &wallet.address(),
+        1_000_000,
+    ).await?;
+    // 查询代币元数据
+    println!("查询代币元数据...");
+    let metadata = TokenManager::get_token_metadata(client.clone(), &token_type).await?;
+    println!("代币元数据: {:?}", metadata);
+    // 查询余额
+    println!("查询余额...");
+    let balance = TokenManager::get_token_balance(
+        client.clone(),
+        &wallet.address(),
+        &token_type,
+    ).await?;
+    println!("当前余额: {}", balance);
+
+    Ok(())
+}
+```
+
 ## 事件
 
 ### 基础事件监听
