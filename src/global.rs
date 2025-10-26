@@ -18,6 +18,14 @@ pub mod mainnet {
     }
     /// system module
     pub mod sys_module {
+        pub mod token {
+            pub const name: &str = "token";
+            pub const create_collection_script: &str = "create_collection_script";
+            pub const create_token_script: &str = "create_token_script";
+            pub const transfer_script: &str = "transfer_script";
+            pub const collections: &str = "0x3::token::Collections";
+            pub const token_store: &str = "0x3::token::TokenStore";
+        }
         pub mod managed_coin {
             pub const name: &str = "managed_coin";
             pub const initialize: &str = "initialize";
@@ -64,6 +72,7 @@ pub mod mainnet {
         pub const CELLANASWAP_PROTOCOL_ADDRESS: &str =
             "0x9b5a27d3e7c7c8f7f313f43e4bdc00d8b652b0c5e0e0e0e0e0e0e0e0e0e0e0e0";
     }
+    pub mod nft_market {}
     pub mod token_address {
         pub const USDC: &str = "0x5e156f1207d0ebfa19a9eeff00d62a282278fb8719f4fab3a586a0a2c0fffbea";
         pub const USDT: &str = "0x6f986d62e504433e05552cde45c4c6d6f8eebafe47678d7f6a13ed8f6acd0e6";
