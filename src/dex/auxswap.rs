@@ -10,6 +10,38 @@ use tokio::sync::broadcast;
 pub struct AuxExchange;
 
 impl AuxExchange {
+     /// get swap events
+    pub async fn get_swap_events(
+        client: Arc<AptosClient>,
+    ) -> Result<Vec<EventData>, String> {
+        let event_type = format!("{}::amm::SwapEvent", AUXSWAP_PROTOCOL_ADDRESS);
+        Self::get_recent_events(client, &event_type).await
+    }
+    async fn get_recent_events(
+        client: Arc<AptosClient>,
+        event_type: &str,
+    ) -> Result<Vec<EventData>, String> {
+        let mut all_events = Vec::new();
+        let mut start_seq: Option<u64> = None;
+        let events = client
+            .get_account_event_vec(AUXSWAP_PROTOCOL_ADDRESS, event_type, Some(100), start_seq)
+            .await
+            .map_err(|e| e.to_string())?;
+        for event in events {
+            if let Ok(sequence) = event.sequence_number.parse::<u64>() {
+                let event_data = EventData {
+                    event_type: event.r#type.clone(),
+                    event_data: event.data.clone(),
+                    sequence_number: sequence,
+                    transaction_hash: "".to_string(),
+                    block_height: 0,
+                };
+                all_events.push(event_data);
+            }
+        }
+        Ok(all_events)
+    }
+    
     /// listen Aux Exchange events
     pub async fn listen_events(
         client: Arc<AptosClient>,

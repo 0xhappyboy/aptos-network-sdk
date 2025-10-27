@@ -5,7 +5,8 @@ use crate::{
     global::mainnet::{
         protocol_address::{
             ANIMESWAP_PROTOCOL_ADDRESS, AUXSWAP_PROTOCOL_ADDRESS, CELLANASWAP_PROTOCOL_ADDRESS,
-            LIQUIDSWAP_PROTOCOL_ADDRESS, PANCAKESWAP_PROTOCOL_ADDRESS, THALA_PROTOCOL_ADDRESS,
+            LIQUIDSWAP_PROTOCOL_ADDRESS, PANCAKESWAP_FACTORY_PROTOCOL_ADDRESS,
+            THALA_PROTOCOL_ADDRESS,
         },
         sys_address::X_3,
         token_address::{USDC, USDT, WORMHOLE_USDC},
@@ -360,7 +361,7 @@ impl TokenSearchManager {
             // Liquidswap
             LIQUIDSWAP_PROTOCOL_ADDRESS,
             // PancakeSwap
-            PANCAKESWAP_PROTOCOL_ADDRESS,
+            PANCAKESWAP_FACTORY_PROTOCOL_ADDRESS,
             USDC,          // USDC
             USDT,          // USDT
             WORMHOLE_USDC, // Wormhole USDC
@@ -538,7 +539,7 @@ impl TokenSearchManager {
         let dex_addresses = vec![
             LIQUIDSWAP_PROTOCOL_ADDRESS,
             THALA_PROTOCOL_ADDRESS,
-            PANCAKESWAP_PROTOCOL_ADDRESS,
+            PANCAKESWAP_FACTORY_PROTOCOL_ADDRESS,
             ANIMESWAP_PROTOCOL_ADDRESS,
             AUXSWAP_PROTOCOL_ADDRESS,
             CELLANASWAP_PROTOCOL_ADDRESS,
@@ -614,7 +615,7 @@ impl TokenSearchManager {
                     symbol: token_name.to_string(),
                     address: token_type.to_string(),
                     name: format!("{} Token", token_name),
-                    decimals: 8, 
+                    decimals: 8,
                     verified: Self::is_verified_token(token_name),
                 });
             }

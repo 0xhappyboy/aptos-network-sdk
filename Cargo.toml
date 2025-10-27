@@ -1,6 +1,6 @@
 [package]
 name = "aptos-network-sdk"
-version = "0.2.5"
+version = "0.3.0"
 edition = "2024"
 authors = ["happyboy <superhappyboy1995@gmail.com>"]
 description = "Aptos network sdk, Implement most of the commonly used practical transaction-related functions of the Aptos network."
@@ -23,3 +23,4 @@ base64 = "0.21"
 bcs = "0.1.6"
 aptos-network-tool = "0.1.0"
 futures = "0.3.31"
+sha2 = "0.10.9"

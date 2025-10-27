@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::trade::Transaction;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Block {
     pub block_height: String,
@@ -40,23 +42,23 @@ pub struct ChainInfo {
     pub node_role: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Transaction {
-    pub version: Option<String>,
-    pub hash: String,
-    pub sender: String,
-    pub sequence_number: String,
-    pub max_gas_amount: String,
-    pub gas_unit_price: String,
-    pub expiration_timestamp_secs: String,
-    pub payload: serde_json::Value,
-    pub signature: Option<serde_json::Value>,
-    pub events: Vec<Event>,
-    pub timestamp: String,
-    pub r#type: String,
-    pub success: bool,
-    pub vm_status: String,
-}
+// #[derive(Debug, Clone, Serialize, Deserialize)]
+// pub struct Transaction {
+//     pub version: Option<String>,
+//     pub hash: String,
+//     pub sender: String,
+//     pub sequence_number: String,
+//     pub max_gas_amount: String,
+//     pub gas_unit_price: String,
+//     pub expiration_timestamp_secs: String,
+//     pub payload: serde_json::Value,
+//     pub signature: Option<serde_json::Value>,
+//     pub events: Vec<Event>,
+//     pub timestamp: String,
+//     pub r#type: String,
+//     pub success: bool,
+//     pub vm_status: String,
+// }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Event {
@@ -110,6 +112,12 @@ pub struct ContractWriteResult {
     pub gas_used: String,
     pub events: Vec<Value>,
     pub error: Option<String>,
+}
+
+impl ContractWriteResult {
+    pub fn gas_used_as_u64(&self) -> u64 {
+        self.gas_used.parse::<u64>().unwrap_or(0)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

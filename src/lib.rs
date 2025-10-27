@@ -1,20 +1,20 @@
+pub mod bridge;
 pub mod contract;
 pub mod dex;
 pub mod event;
 pub mod global;
 pub mod multicall;
+pub mod nft;
+pub mod nft_market;
+pub mod staking;
+pub mod token;
+pub mod tool;
 pub mod trade;
 pub mod types;
 pub mod wallet;
-pub mod token;
-pub mod nft;
-pub mod bridge;
-pub mod tool;
-pub mod staking;
 
 use crate::{
-    global::rpc::{APTOS_DEVNET_URL, APTOS_MAINNET_URL, APTOS_TESTNET_URL},
-    types::*,
+    global::rpc::{APTOS_DEVNET_URL, APTOS_MAINNET_URL, APTOS_TESTNET_URL}, trade::Transaction, types::*
 };
 use reqwest::Client;
 use serde_json::Value;

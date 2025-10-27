@@ -5,6 +5,7 @@ use crate::{
 };
 use aptos_network_tool::{address::address_to_bytes, signature::serialize_transaction_and_sign};
 use futures::future::join_all;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
     collections::HashMap,
@@ -259,6 +260,292 @@ impl Trade {
             }
         }))
     }
+
+    /// Retrieves transaction history for a specified address with pagination support
+    ///
+    /// # Params
+    /// client - Aptos Client
+    /// address - address
+    /// query - query:
+    ///     - start - page
+    ///     - limit - page size
+    ///
+    /// # Returns
+    /// Ok(Vec<Transaction>) - Transaction vec
+    /// Err(String) - Error
+    ///
+    /// # Examples
+    /// ```rust
+    /// use std::sync::Arc;
+    ///
+    /// let client = Arc::new(AptosClient::new(AptosClientType::Mainnet));
+    /// let query = TransactionQuery {
+    ///     start: Some(0),
+    ///     limit: Some(10)
+    /// };
+    ///
+    /// match Trade::get_address_transactions(client, "0x1234...", query).await {
+    ///     Ok(transactions) => println!("Search {} transactions", transactions.len()),
+    ///     Err(e) => println!("Error: {}", e),
+    /// }
+    /// ```
+    pub async fn get_address_transactions(
+        client: Arc<AptosClient>,
+        address: &str,
+        query: TransactionQuery,
+    ) -> Result<Vec<Transaction>, String> {
+        client
+            .get_account_transaction_vec(address, query.limit, query.start)
+            .await
+    }
+
+    /// Filters transactions from address_a to only include those involving address_b
+    ///
+    /// # Params
+    /// client - aptos client
+    /// address_a - The primary account address to fetch transactions from
+    /// address_b - Address B used as filtering condition
+    /// limit - data limit
+    /// start - starting sequence number for pagination (Optional)
+    ///
+    /// # Returns
+    /// Ok(Vec<Transaction>) - Filtered vector of transactions where both addresses are involved
+    /// Err(String) - Error message if the request fails
+    ///
+    /// # Examples
+    /// ```
+    /// use std::sync::Arc;
+    ///
+    /// let client = Arc::new(AptosClient::new(AptosClientType::Mainnet));
+    ///
+    /// // Find all transactions where 0x1234... and 0x5678... interacted
+    /// match Trade::get_transactions_involving_both_addresses(
+    ///     client,
+    ///     "0x1234...",
+    ///     "0x5678...",
+    ///     Some(50),  // Limit to 50 transactions
+    ///     None       // Start from most recent
+    /// ).await {
+    ///     Ok(shared_transactions) => {
+    ///         println!("Search {} shared transactions", shared_transactions.len());
+    ///     },
+    ///     Err(e) => println!("Error: {}", e),
+    /// }
+    /// ```
+    ///
+    pub async fn get_transactions_involving_both_addresses(
+        client: Arc<AptosClient>,
+        address_a: &str,
+        address_b: &str,
+        limit: Option<u64>,
+        start: Option<u64>,
+    ) -> Result<Vec<Transaction>, String> {
+        let query = TransactionQuery { start, limit };
+        let transactions = Self::get_address_transactions(client, address_a, query).await?;
+        let filtered_transactions: Vec<Transaction> = transactions
+            .into_iter()
+            .filter(|txn| Self::transaction_involves_address(txn, address_b))
+            .collect();
+        Ok(filtered_transactions)
+    }
+
+    /// Retrieves transactions where address_b is the sender and address_a is the recipient
+    ///
+    /// This function specifically finds transfer transactions where `address_b` (payer) sent funds
+    /// to `address_a` (recipient). It searches through `address_b`'s transaction history and
+    /// filters for coin transfer operations targeting `address_a`.
+    ///
+    /// # Params
+    /// client - aptos client
+    /// address_a - The primary account address to fetch transactions from
+    /// address_b - Address B used as filtering condition
+    /// limit - data limit
+    /// start - starting sequence number for pagination (Optional)
+    ///
+    /// # Returns
+    /// Ok(Vec<Transaction>) - Transaction vec
+    /// Err(String) - Error message
+    ///
+    /// # Examples
+    /// ```
+    /// use std::sync::Arc;
+    ///
+    /// let client = Arc::new(AptosClient::new(AptosClientType::Mainnet));
+    ///
+    /// // Find all payments from Alice (0x5678...) to Bob (0x1234...)
+    /// match Trade::get_transactions_by_recipient_sender(
+    ///     client,
+    ///     "0x1234...",  // address A - recipient
+    ///     "0x5678...",  // address B - sender
+    ///     Some(100),    // Limit to 100 transactions
+    ///     None          // Start from most recent
+    /// ).await {
+    ///     Ok(payments) => {
+    ///         println!("Found {} payments from Alice to Bob", payments.len());
+    ///         for payment in payments {
+    ///             if let Some(transfer_info) = Trade::get_transfer_info(&payment) {
+    ///                 println!("Amount: {} {}", transfer_info.amount, transfer_info.token_type);
+    ///             }
+    ///         }
+    ///     },
+    ///     Err(e) => println!("Error: {}", e),
+    /// }
+    /// ```
+    ///
+    pub async fn get_transactions_by_recipient_sender(
+        client: Arc<AptosClient>,
+        address_a: &str, // Receiver
+        address_b: &str, // Payer
+        limit: Option<u64>,
+        start: Option<u64>,
+    ) -> Result<Vec<Transaction>, String> {
+        let query = TransactionQuery { start, limit };
+        let transactions =
+            Self::get_address_transactions(Arc::clone(&client), address_b, query).await?;
+        let filtered_transactions: Vec<Transaction> = transactions
+            .into_iter()
+            .filter(|txn| Self::is_transfer_from_to(txn, address_b, address_a))
+            .collect();
+        Ok(filtered_transactions)
+    }
+
+    /// Check if the transaction involves the specified address
+    fn transaction_involves_address(transaction: &Transaction, address: &str) -> bool {
+        match &transaction.transaction_type {
+            TransactionType::UserTransaction(user_txn) => {
+                // Check sender
+                if user_txn.sender == address {
+                    return true;
+                }
+                // Check the address parameter in the payload
+                Self::payload_contains_address(&user_txn.payload, address)
+            }
+            TransactionType::PendingTransaction(pending_txn) => {
+                pending_txn.sender == address
+                    || Self::payload_contains_address(&pending_txn.payload, address)
+            }
+            _ => false,
+        }
+    }
+
+    /// Check if the transaction is a transfer from from_address to to_address
+    fn is_transfer_from_to(
+        transaction: &Transaction,
+        from_address: &str,
+        to_address: &str,
+    ) -> bool {
+        match &transaction.transaction_type {
+            TransactionType::UserTransaction(user_txn) => {
+                if user_txn.sender != from_address {
+                    return false;
+                }
+                Self::is_transfer_to_address(&user_txn.payload, to_address)
+            }
+            TransactionType::PendingTransaction(pending_txn) => {
+                if pending_txn.sender != from_address {
+                    return false;
+                }
+                Self::is_transfer_to_address(&pending_txn.payload, to_address)
+            }
+            _ => false,
+        }
+    }
+
+    /// Check if the payload contains the specified address
+    fn payload_contains_address(payload: &Payload, address: &str) -> bool {
+        for arg in &payload.arguments {
+            if let Some(arg_str) = arg.as_str() {
+                if arg_str == address {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    /// Check if the payload is a transfer to the specified address
+    fn is_transfer_to_address(payload: &Payload, recipient_address: &str) -> bool {
+        if payload.function.ends_with("::coin::transfer") {
+            if let Some(first_arg) = payload.arguments.first() {
+                if let Some(recipient) = first_arg.as_str() {
+                    return recipient == recipient_address;
+                }
+            }
+        }
+        false
+    }
+
+    /// Get user transaction details
+    pub fn get_user_transaction(transaction: &Transaction) -> Option<&UserTransaction> {
+        match &transaction.transaction_type {
+            TransactionType::UserTransaction(user_txn) => Some(user_txn),
+            _ => None,
+        }
+    }
+
+    /// Get transfer information in the transaction
+    pub fn get_transfer_info(transaction: &Transaction) -> Option<TransferInfo> {
+        let user_txn = Self::get_user_transaction(transaction)?;
+        if user_txn.payload.function.ends_with("::coin::transfer") {
+            if user_txn.payload.arguments.len() >= 2 {
+                let recipient = user_txn.payload.arguments[0].as_str()?.to_string();
+                let amount = user_txn.payload.arguments[1].as_str()?.parse().ok()?;
+                // Extract token type
+                let token_type = if !user_txn.payload.type_arguments.is_empty() {
+                    user_txn.payload.type_arguments[0].clone()
+                } else {
+                    "0x1::aptos_coin::AptosCoin".to_string()
+                };
+                Some(TransferInfo {
+                    from: user_txn.sender.clone(),
+                    to: recipient,
+                    amount,
+                    token_type,
+                })
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Get events of a specific type in transaction events
+    pub fn get_events_by_type<'a>(
+        transaction: &'a Transaction,
+        event_type: &str,
+    ) -> Vec<&'a Event> {
+        transaction
+            .events
+            .iter()
+            .filter(|event| event.r#type.contains(event_type))
+            .collect()
+    }
+
+    /// Analyze resource changes in transactions
+    pub fn analyze_resource_changes(transaction: &Transaction) -> ResourceChanges {
+        let mut changes = ResourceChanges::default();
+        for change in &transaction.changes {
+            match change.change_type.as_str() {
+                "write_resource" => {
+                    if let Some(_data) = &change.data {
+                        changes.resources_modified += 1;
+                    }
+                }
+                "write_table_item" => {
+                    changes.table_items_modified += 1;
+                }
+                "delete_resource" => {
+                    changes.resources_deleted += 1;
+                }
+                "delete_table_item" => {
+                    changes.table_items_deleted += 1;
+                }
+                _ => {}
+            }
+        }
+        changes
+    }
 }
 
 /// batch transaction processor
@@ -326,5 +613,225 @@ impl BatchTradeHandle {
             }
         }
         Ok(all_results)
+    }
+}
+
+/// Represents a transaction on the Aptos blockchain
+/// Contains all relevant information about a transaction including metadata, payload, and execution results
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Transaction {
+    /// The version number of the transaction (global sequence number)
+    pub version: String,
+    /// The hash of the transaction (unique identifier)
+    pub hash: String,
+    /// Hash representing the state changes caused by this transaction
+    pub state_change_hash: String,
+    /// Root hash of the event accumulator after this transaction
+    pub event_root_hash: String,
+    /// Hash of the state checkpoint (if this is a checkpoint transaction)
+    pub state_checkpoint_hash: Option<String>,
+    /// Amount of gas used by the transaction
+    pub gas_used: String,
+    /// Whether the transaction executed successfully
+    pub success: bool,
+    /// Status message from the virtual machine after execution
+    pub vm_status: String,
+    /// Root hash of the transaction accumulator
+    pub accumulator_root_hash: String,
+    /// List of state changes (resources modified, tables updated, etc.)
+    pub changes: Vec<WriteSetChange>,
+    /// Events emitted during transaction execution
+    pub events: Vec<Event>,
+    /// Timestamp when the transaction was executed (in microseconds)
+    pub timestamp: String,
+    /// Maximum gas amount that could be used for this transaction
+    pub max_gas_amount: String,
+    /// The specific type of transaction and its payload data
+    /// Uses serde flatten to include all transaction-type-specific fields
+    #[serde(flatten)]
+    pub transaction_type: TransactionType,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum TransactionType {
+    #[serde(rename = "pending_transaction")]
+    PendingTransaction(PendingTransaction),
+    #[serde(rename = "user_transaction")]
+    UserTransaction(UserTransaction),
+    #[serde(rename = "genesis_transaction")]
+    GenesisTransaction(GenesisTransaction),
+    #[serde(rename = "block_metadata_transaction")]
+    BlockMetadataTransaction(BlockMetadataTransaction),
+    #[serde(rename = "state_checkpoint_transaction")]
+    StateCheckpointTransaction(StateCheckpointTransaction),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PendingTransaction {
+    pub hash: String,
+    pub sender: String,
+    pub sequence_number: String,
+    pub max_gas_amount: String,
+    pub gas_unit_price: String,
+    pub expiration_timestamp_secs: String,
+    pub payload: Payload,
+    pub signature: Option<Signature>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserTransaction {
+    pub sender: String,
+    pub sequence_number: String,
+    pub max_gas_amount: String,
+    pub gas_unit_price: String,
+    pub expiration_timestamp_secs: String,
+    pub payload: Payload,
+    pub signature: Signature,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GenesisTransaction {
+    pub payload: Payload,
+    pub events: Vec<Event>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BlockMetadataTransaction {
+    pub id: String,
+    pub round: String,
+    pub previous_block_votes_bitvec: Vec<u8>,
+    pub proposer: String,
+    pub timestamp: String,
+    pub events: Vec<Event>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StateCheckpointTransaction {
+    pub timestamp: String,
+    pub version: String,
+    pub hash: String,
+    pub state_change_hash: String,
+    pub event_root_hash: String,
+    pub state_checkpoint_hash: Option<String>,
+    pub gas_used: String,
+    pub success: bool,
+    pub vm_status: String,
+    pub accumulator_root_hash: String,
+    pub changes: Vec<WriteSetChange>,
+    pub events: Vec<Event>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Payload {
+    #[serde(rename = "type")]
+    pub payload_type: String,
+    pub function: String,
+    pub type_arguments: Vec<String>,
+    pub arguments: Vec<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code: Option<Code>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Code {
+    pub bytecode: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Signature {
+    #[serde(rename = "type")]
+    pub signature_type: String,
+    pub public_key: String,
+    pub signature: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Event {
+    pub guid: Guid,
+    pub sequence_number: String,
+    pub r#type: String,
+    pub data: Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Guid {
+    pub creation_number: String,
+    pub account_address: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WriteSetChange {
+    #[serde(rename = "type")]
+    pub change_type: String,
+    pub address: String,
+    pub state_key_hash: String,
+    pub data: Option<Value>,
+    pub handle: Option<String>,
+    pub key: Option<String>,
+    pub value: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubmitTransactionRequest {
+    pub sender: String,
+    pub sequence_number: String,
+    pub max_gas_amount: String,
+    pub gas_unit_price: String,
+    pub expiration_timestamp_secs: String,
+    pub payload: Payload,
+    pub signature: Signature,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionQuery {
+    pub start: Option<u64>,
+    pub limit: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransferInfo {
+    pub from: String,
+    pub to: String,
+    pub amount: u64,
+    pub token_type: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ResourceChanges {
+    pub resources_modified: usize,
+    pub resources_deleted: usize,
+    pub table_items_modified: usize,
+    pub table_items_deleted: usize,
+}
+
+impl Transaction {
+    /// Check if the transaction was successful
+    pub fn is_successful(&self) -> bool {
+        self.success
+    }
+
+    /// Get transaction timestamp
+    pub fn get_timestamp(&self) -> Option<u64> {
+        self.timestamp.parse().ok()
+    }
+
+    /// Get the amount of gas used
+    pub fn get_gas_used(&self) -> Option<u64> {
+        self.gas_used.parse().ok()
+    }
+
+    /// Check whether it is a user transaction
+    pub fn is_user_transaction(&self) -> bool {
+        matches!(self.transaction_type, TransactionType::UserTransaction(_))
+    }
+
+    /// Get the sender address in this transaction.
+    pub fn get_sender(&self) -> Option<&str> {
+        match &self.transaction_type {
+            TransactionType::UserTransaction(user_txn) => Some(&user_txn.sender),
+            TransactionType::PendingTransaction(pending_txn) => Some(&pending_txn.sender),
+            _ => None,
+        }
     }
 }
