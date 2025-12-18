@@ -8,7 +8,7 @@ use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -857,6 +857,460 @@ impl TransactionInfo {
             TransactionType::UserTransaction(user_txn) => Some(&user_txn.sender),
             TransactionType::PendingTransaction(pending_txn) => Some(&pending_txn.sender),
             _ => None,
+        }
+    }
+
+    fn extract_received_from_event(event: &Event) -> Vec<(String, u64)> {
+        let mut result = Vec::new();
+        if let serde_json::Value::Object(data) = &event.data {
+            if event.r#type.contains("Swap") {
+                if let (Some(amount_value), Some(token_value)) =
+                    (data.get("amount_out"), data.get("to_token"))
+                {
+                    if let (Some(amount), Some(token_str)) = (
+                        Self::parse_amount_simple(amount_value),
+                        token_value.as_str(),
+                    ) {
+                        result.push((token_str.to_string(), amount));
+                    }
+                }
+                let output_combos = [
+                    ("amount_y_out", "token_y"),
+                    ("output_amount", "output_token"),
+                    ("amount1_out", "token1"),
+                ];
+                for (amount_field, token_field) in &output_combos {
+                    if let (Some(amount_value), Some(token_value)) =
+                        (data.get(*amount_field), data.get(*token_field))
+                    {
+                        if let (Some(amount), Some(token_str)) = (
+                            Self::parse_amount_simple(amount_value),
+                            token_value.as_str(),
+                        ) {
+                            result.push((token_str.to_string(), amount));
+                        }
+                    }
+                }
+            }
+            if event.r#type.contains("fungible_asset::Deposit") {
+                if let Some(amount_value) = data.get("amount") {
+                    if let Some(amount) = Self::parse_amount_simple(amount_value) {
+                        let token_type = Self::infer_token_from_event_type(event);
+                        if let Some(token) = token_type {
+                            result.push((token.clone(), amount));
+                        }
+                    }
+                }
+            }
+        }
+        result
+    }
+
+    fn extract_spent_from_event(event: &Event) -> Vec<(String, u64)> {
+        let mut result = Vec::new();
+        if let serde_json::Value::Object(data) = &event.data {
+            if event.r#type.contains("Swap") {
+                if let (Some(amount_value), Some(token_value)) =
+                    (data.get("amount_in"), data.get("from_token"))
+                {
+                    if let (Some(amount), Some(token_str)) = (
+                        Self::parse_amount_simple(amount_value),
+                        token_value.as_str(),
+                    ) {
+                        result.push((token_str.to_string(), amount));
+                    }
+                }
+                let input_combos = [
+                    ("amount_x_in", "token_x"),
+                    ("amount0_in", "token0"),
+                    ("input_amount", "input_token"),
+                ];
+                for (amount_field, token_field) in &input_combos {
+                    if let (Some(amount_value), Some(token_value)) =
+                        (data.get(*amount_field), data.get(*token_field))
+                    {
+                        if let (Some(amount), Some(token_str)) = (
+                            Self::parse_amount_simple(amount_value),
+                            token_value.as_str(),
+                        ) {
+                            result.push((token_str.to_string(), amount));
+                        }
+                    }
+                }
+            }
+            if event.r#type.contains("fungible_asset::Withdraw") {
+                if let Some(amount_value) = data.get("amount") {
+                    if let Some(amount) = Self::parse_amount_simple(amount_value) {
+                        let token_type = Self::infer_token_from_event_type(event);
+                        if let Some(token) = token_type {
+                            result.push((token.clone(), amount));
+                        }
+                    }
+                }
+            }
+        }
+        result
+    }
+
+    fn infer_token_from_event_type(event: &Event) -> Option<String> {
+        let event_type = &event.r#type;
+        if event_type.contains("aptos_coin") {
+            Some("0x1::aptos_coin::AptosCoin".to_string())
+        } else if event_type.contains("usdt") || event_type.contains("USDt") {
+            Some("0x1::usdt::USDT".to_string())
+        } else if event_type.contains("EchoCoin002") {
+            Some("0xe4ccb6d39136469f376242c31b34d10515c8eaaa38092f804db8e08a8f53c5b2::assets_v1::EchoCoin002".to_string())
+        } else if event_type
+            .contains("0x2ebb2ccac5e027a87fa0e2e5f656a3a4238d6a48d93ec9b610d570fc0aa0df12")
+        {
+            Some("0x2ebb2ccac5e027a87fa0e2e5f656a3a4238d6a48d93ec9b610d570fc0aa0df12".to_string())
+        } else if event_type
+            .contains("0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b")
+        {
+            Some("0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b".to_string())
+        } else {
+            None
+        }
+    }
+
+    pub fn get_spent_token(&self) -> Option<(String, u64)> {
+        if !self.success {
+            return None;
+        }
+        for event in self.events.iter().rev() {
+            if event.r#type.contains("Swap") {
+                if let serde_json::Value::Object(data) = &event.data {
+                    let input_pairs = [
+                        ("amount_in", "from_token"),
+                        ("amount_x_in", "token_x"),
+                        ("amount0_in", "token0"),
+                        ("input_amount", "input_token"),
+                        ("amount", "coin_type"),
+                    ];
+                    for (amount_field, token_field) in &input_pairs {
+                        if let (Some(amount_value), Some(token_value)) =
+                            (data.get(*amount_field), data.get(*token_field))
+                        {
+                            if let (Some(amount), Some(token_str)) = (
+                                Self::parse_amount_simple(amount_value),
+                                Self::extract_token_string(token_value),
+                            ) {
+                                if amount > 0 {
+                                    return Some((token_str, amount));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
+    pub fn get_received_token(&self) -> Option<(String, u64)> {
+        if !self.success {
+            return None;
+        }
+        for event in self.events.iter().rev() {
+            if event.r#type.contains("Swap") {
+                if let serde_json::Value::Object(data) = &event.data {
+                    let output_pairs = [
+                        ("amount_out", "to_token"),
+                        ("amount_y_out", "token_y"),
+                        ("amount1_out", "token1"),
+                        ("output_amount", "output_token"),
+                        ("amount", "coin_type"),
+                    ];
+                    for (amount_field, token_field) in &output_pairs {
+                        if let (Some(amount_value), Some(token_value)) =
+                            (data.get(*amount_field), data.get(*token_field))
+                        {
+                            if let (Some(amount), Some(token_str)) = (
+                                Self::parse_amount_simple(amount_value),
+                                Self::extract_token_string(token_value),
+                            ) {
+                                if amount > 0 {
+                                    return Some((token_str, amount));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn guess_decimals_from_amount(amount: u64) -> u8 {
+        let amount_str = amount.to_string();
+        let len = amount_str.len();
+        if len > 6 && amount_str.ends_with("000000") {
+            return 6;
+        }
+        if len > 8 && amount_str.ends_with("00000000") {
+            return 8;
+        }
+        if amount > 1_000_000_000_000 {
+            return 6;
+        } else if amount > 10_000_000 && amount < 100_000_000_000 {
+            return 8;
+        } else {
+            return 6;
+        }
+    }
+
+    fn extract_token_string(value: &serde_json::Value) -> Option<String> {
+        match value {
+            serde_json::Value::String(s) => match s.as_str() {
+                "0xa" => Some("0x1::aptos_coin::AptosCoin".to_string()),
+                _ => Some(s.clone()),
+            },
+            serde_json::Value::Object(obj) => {
+                for field in ["inner", "value", "address", "token"] {
+                    if let Some(inner_value) = obj.get(field) {
+                        if let Some(result) = Self::extract_token_string(inner_value) {
+                            return Some(result);
+                        }
+                    }
+                }
+                None
+            }
+            _ => None,
+        }
+    }
+
+    pub fn get_spent_token_eth(&self) -> Option<(String, f64)> {
+        self.get_spent_token().map(|(token, amount)| {
+            let decimals = Self::guess_decimals_from_amount(amount);
+            let decimal_amount = amount as f64 / 10_u64.pow(decimals as u32) as f64;
+            (token, decimal_amount)
+        })
+    }
+
+    pub fn get_received_token_eth(&self) -> Option<(String, f64)> {
+        self.get_received_token().map(|(token, amount)| {
+            let decimals = Self::guess_decimals_from_amount(amount);
+            let decimal_amount = amount as f64 / 10_u64.pow(decimals as u32) as f64;
+            (token, decimal_amount)
+        })
+    }
+
+    fn parse_amount_simple(value: &serde_json::Value) -> Option<u64> {
+        if let Some(s) = value.as_str() {
+            if let Ok(n) = s.parse::<u64>() {
+                return Some(n);
+            }
+        }
+        if let Some(n) = value.as_u64() {
+            return Some(n);
+        }
+        if let Some(n) = value.as_i64() {
+            if n >= 0 {
+                return Some(n as u64);
+            }
+        }
+        None
+    }
+
+    pub fn getDirection(&self) -> String {
+        match (self.get_spent_token_eth(), self.get_received_token_eth()) {
+            (Some((spent_token, _)), Some((received_token, _))) => {
+                if spent_token.contains("EchoCoin002") && received_token.contains("aptos_coin") {
+                    "BUY".to_string()
+                } else if spent_token.contains("aptos_coin")
+                    && received_token.contains("EchoCoin002")
+                {
+                    "SELL".to_string()
+                } else {
+                    "SWAP".to_string()
+                }
+            }
+            _ => "TRANSFER".to_string(),
+        }
+    }
+
+    fn get_decimals_for_token(token: &str) -> u8 {
+        if token.contains("EchoCoin002")
+            || token.contains("0x9da434d9b873b5159e8eeed70202ad22dc075867a7793234fbc981b63e119")
+        {
+            6
+        } else if token.contains("aptos_coin") || token == "0xa" {
+            8
+        } else if token
+            .contains("0x2ebb2ccac5e027a87fa0e2e5f656a3a4238d6a48d93ec9b610d570fc0aa0df12")
+        {
+            8
+        } else if token
+            .contains("0x357b0b74bc833e95a115ad22604854d6b0fca151cecd94111770e5d6ffc9dc2b")
+        {
+            6
+        } else {
+            8
+        }
+    }
+
+    pub fn calculate_all_token_balances(&self) {
+        let mut spent_map: HashMap<String, u64> = HashMap::new();
+        let mut received_map: HashMap<String, u64> = HashMap::new();
+        for event in &self.events {
+            let spent = Self::extract_spent_from_event(event);
+            for (token, amount) in spent {
+                *spent_map.entry(token).or_insert(0) += amount;
+            }
+        }
+        for event in &self.events {
+            let received = Self::extract_received_from_event(event);
+            for (token, amount) in received {
+                *received_map.entry(token).or_insert(0) += amount;
+            }
+        }
+        for (token, total) in &spent_map {
+            let decimals = Self::get_decimals_for_token(token);
+        }
+        for (token, total) in &received_map {
+            let decimals = Self::get_decimals_for_token(token);
+        }
+        let all_tokens: HashSet<_> = spent_map.keys().chain(received_map.keys()).collect();
+        for token in all_tokens {
+            let spent = spent_map.get(token).copied().unwrap_or(0);
+            let received = received_map.get(token).copied().unwrap_or(0);
+            let net = received as i128 - spent as i128;
+            if net != 0 {
+                let decimals = Self::get_decimals_for_token(token);
+            }
+        }
+    }
+
+    pub fn get_liquidity_pool_addresses(&self) -> Vec<String> {
+        let mut pool_addresses = Vec::new();
+        for event in &self.events {
+            let event_type = &event.r#type;
+            if event_type.contains("Pool") || event_type.contains("Swap") {
+                if let guid = &event.guid {
+                    pool_addresses.push(guid.account_address.clone());
+                }
+                if let serde_json::Value::Object(data) = &event.data {
+                    let possible_fields = [
+                        "pool_address",
+                        "pool",
+                        "pair",
+                        "liquidity_pool",
+                        "address",
+                        "contract_address",
+                        "dex_address",
+                    ];
+                    for field in &possible_fields {
+                        if let Some(addr_value) = data.get(*field) {
+                            if let Some(addr_str) = addr_value.as_str() {
+                                pool_addresses.push(addr_str.to_string());
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        pool_addresses.sort();
+        pool_addresses.dedup();
+        pool_addresses
+    }
+
+    pub fn get_dex_names(&self) -> Vec<String> {
+        let mut dex_names = Vec::new();
+        if let TransactionType::UserTransaction(user_txn) = &self.transaction_type {
+            let function = &user_txn.payload.function;
+            if function.contains("panora_swap") {
+                dex_names.push("Panora Exchange".to_string());
+            }
+            if function.contains("pancake") {
+                dex_names.push("PancakeSwap".to_string());
+            }
+            if function.contains("hyperion") {
+                dex_names.push("Hyperion".to_string());
+            }
+            if function.contains("tapp") {
+                dex_names.push("Tapp Exchange".to_string());
+            }
+            if function.contains("cellana") {
+                dex_names.push("Cellana Finance".to_string());
+            }
+        }
+        for event in &self.events {
+            let event_type = &event.r#type;
+
+            if event_type.contains("panora") && !dex_names.contains(&"Panora Exchange".to_string())
+            {
+                dex_names.push("Panora Exchange".to_string());
+            }
+            if event_type.contains("pancake") && !dex_names.contains(&"PancakeSwap".to_string()) {
+                dex_names.push("PancakeSwap".to_string());
+            }
+            if event_type.contains("hyperion") && !dex_names.contains(&"Hyperion".to_string()) {
+                dex_names.push("Hyperion".to_string());
+            }
+            if event_type.contains("tapp") && !dex_names.contains(&"Tapp Exchange".to_string()) {
+                dex_names.push("Tapp Exchange".to_string());
+            }
+            if event_type.contains("cellana") && !dex_names.contains(&"Cellana Finance".to_string())
+            {
+                dex_names.push("Cellana Finance".to_string());
+            }
+            if let serde_json::Value::Object(data) = &event.data {
+                let dex_fields = ["dex", "exchange", "platform", "protocol"];
+                for field in &dex_fields {
+                    if let Some(dex_value) = data.get(*field) {
+                        if let Some(dex_str) = dex_value.as_str() {
+                            let dex_name = dex_str.to_string();
+                            if !dex_names.contains(&dex_name) {
+                                dex_names.push(dex_name);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if dex_names.is_empty() {
+            let pools = self.get_liquidity_pool_addresses();
+            for pool in pools {
+                if pool.contains("0x1c3206") {
+                    dex_names.push("Panora Exchange".to_string());
+                } else if pool.contains("0x2788f4") {
+                    dex_names.push("Hyperion".to_string());
+                } else if pool.contains("0x85d333") {
+                    dex_names.push("Tapp Exchange".to_string());
+                } else if pool.contains("0xd18e39") {
+                    dex_names.push("Cellana Finance".to_string());
+                }
+            }
+        }
+        dex_names.sort();
+        dex_names.dedup();
+        dex_names
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::AptosType;
+
+    use super::*;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_get_specific_transaction() {
+        let client = Aptos::new(AptosType::Mainnet);
+        let known_tx_hash = "0x280a3e0c7e2ab02de2f8052441464fd8b351804c9d336ec988d75b59446ecfdc";
+        let result = client.get_transaction_info_by_hash(known_tx_hash).await;
+        match result {
+            Ok(tx) => {
+                println!("Spent {:?}", tx.get_spent_token_eth());
+                println!("Received {:?}", tx.get_received_token_eth());
+                println!("Liquidity Pool {:?}", tx.get_liquidity_pool_addresses());
+            }
+            Err(e) => {
+                println!("❌ error: {}", e);
+            }
         }
     }
 }

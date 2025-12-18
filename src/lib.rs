@@ -15,7 +15,10 @@ pub mod types;
 pub mod wallet;
 
 use crate::{
-    block::Block, global::rpc::{APTOS_DEVNET_URL, APTOS_MAINNET_URL, APTOS_TESTNET_URL}, trade::TransactionInfo, types::*
+    block::Block,
+    global::rpc::{APTOS_DEVNET_URL, APTOS_MAINNET_URL, APTOS_TESTNET_URL},
+    trade::TransactionInfo,
+    types::*,
 };
 use reqwest::Client;
 use serde_json::Value;
