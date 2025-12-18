@@ -1,3 +1,4 @@
+pub mod block;
 pub mod bridge;
 pub mod contract;
 pub mod dex;
@@ -14,9 +15,7 @@ pub mod types;
 pub mod wallet;
 
 use crate::{
-    global::rpc::{APTOS_DEVNET_URL, APTOS_MAINNET_URL, APTOS_TESTNET_URL},
-    trade::TransactionInfo,
-    types::*,
+    block::Block, global::rpc::{APTOS_DEVNET_URL, APTOS_MAINNET_URL, APTOS_TESTNET_URL}, trade::TransactionInfo, types::*
 };
 use reqwest::Client;
 use serde_json::Value;
@@ -178,14 +177,10 @@ impl Aptos {
             let error_msg = response.text().await.unwrap();
             return Err(format!("api error: {}", error_msg).to_string());
         }
-
         let transaction: TransactionInfo = response
             .json()
             .await
             .map_err(|e| format!("transaction parsing error: {:?}", e))?;
-
-        println!("交易信息:{:?}", transaction);
-
         Ok(transaction)
     }
 

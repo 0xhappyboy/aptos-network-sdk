@@ -6,16 +6,6 @@ use serde_json::Value;
 use crate::trade::TransactionInfo;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Block {
-    pub block_height: String,
-    pub block_hash: String,
-    pub block_timestamp: String,
-    pub first_version: String,
-    pub last_version: String,
-    pub transactions: Vec<TransactionInfo>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountInfo {
     pub sequence_number: String,
     pub authentication_key: String,
