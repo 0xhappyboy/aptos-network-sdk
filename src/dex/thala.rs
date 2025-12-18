@@ -1,6 +1,6 @@
 /// The implementation module of Thala complete interactive logic.
 use crate::{
-    AptosClient,
+    Aptos,
     event::EventData,
     global::mainnet::{protocol_address::THALA_PROTOCOL_ADDRESS, token_address::THL},
     types::ContractCall,
@@ -14,13 +14,13 @@ pub struct Thala;
 
 impl Thala {
     /// get swap events
-    pub async fn get_swap_events(client: Arc<AptosClient>) -> Result<Vec<EventData>, String> {
+    pub async fn get_swap_events(client: Arc<Aptos>) -> Result<Vec<EventData>, String> {
         let event_type = format!("{}::amm::SwapEvent", THALA_PROTOCOL_ADDRESS);
         Self::get_recent_events(client, &event_type).await
     }
 
     async fn get_recent_events(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         event_type: &str,
     ) -> Result<Vec<EventData>, String> {
         let mut all_events = Vec::new();
@@ -46,7 +46,7 @@ impl Thala {
 
     /// add liquidity
     pub async fn add_liquidity(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         coin_x: &str,
         coin_y: &str,
@@ -75,7 +75,7 @@ impl Thala {
 
     /// remove liquidity
     pub async fn remove_liquidity(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         coin_x: &str,
         coin_y: &str,
@@ -101,7 +101,7 @@ impl Thala {
 
     /// swap exact input
     pub async fn swap_exact_input(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         from_coin: &str,
         to_coin: &str,
@@ -125,7 +125,7 @@ impl Thala {
 
     /// swap exact output
     pub async fn swap_exact_output(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         from_coin: &str,
         to_coin: &str,
@@ -149,7 +149,7 @@ impl Thala {
 
     /// get pool info
     pub async fn get_pool_info(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         coin_x: &str,
         coin_y: &str,
     ) -> Result<Value, String> {
@@ -165,14 +165,14 @@ impl Thala {
     }
 
     /// get thl price
-    pub async fn get_thl_price(client: Arc<AptosClient>) -> Result<f64, String> {
+    pub async fn get_thl_price(client: Arc<Aptos>) -> Result<f64, String> {
         let apt_coin = "0x1::aptos_coin::AptosCoin";
         Self::get_price(client, THL, apt_coin, 100000000).await // 1 THL
     }
 
     /// 获取价格
     pub async fn get_price(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         from_coin: &str,
         to_coin: &str,
         amount: u64,
@@ -202,7 +202,7 @@ impl Thala {
 
     /// listen events
     pub async fn listen_events(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         event_sender: broadcast::Sender<EventData>,
         event_types: Vec<ThalaEventType>,
     ) -> Result<(), String> {

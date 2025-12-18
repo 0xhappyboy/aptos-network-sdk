@@ -5,7 +5,7 @@ use serde_json::{Value, json};
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use crate::{
-    AptosClient,
+    Aptos,
     trade::Trade,
     types::{
         ContractCall, ContractReadResult, ContractWriteResult, EntryFunctionPayload, Event,
@@ -29,7 +29,7 @@ pub struct Contract {}
 impl Contract {
     /// read contract data (view read)
     pub async fn read(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         contract_call: &ContractCall,
     ) -> Result<ContractReadResult, String> {
         let function = format!(
@@ -57,7 +57,7 @@ impl Contract {
 
     /// write contract
     pub async fn write(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         contract_call: ContractCall,
     ) -> Result<ContractWriteResult, String> {
@@ -114,7 +114,7 @@ impl Contract {
                     Ok(ContractWriteResult {
                         success: confirmed_txn.success,
                         transaction_hash: confirmed_txn.hash,
-                        gas_used: confirmed_txn.max_gas_amount,
+                        gas_used: confirmed_txn.max_gas_amount.unwrap(),
                         events: confirmed_txn
                             .events
                             .into_iter()
@@ -154,7 +154,7 @@ impl Contract {
 
     /// batch read
     pub async fn batch_read(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         calls: Vec<ContractCall>,
     ) -> Result<Vec<ContractReadResult>, String> {
         let mut results = Vec::new();
@@ -166,7 +166,7 @@ impl Contract {
 
     /// listen contract events
     pub async fn listen_events(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         address: &str,
         event_type: &str,
         callback: impl Fn(Result<Value, String>),
@@ -201,7 +201,7 @@ impl Contract {
 
     /// Event Listener - contains complete event information
     pub async fn listen_events_all_info(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         address: &str,
         event_type: &str,
         callback: impl Fn(Result<Event, String>),
@@ -235,7 +235,7 @@ impl Contract {
 
     /// get contract resource
     pub async fn get_contract_resource(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         address: &str,
         resource_type: &str,
     ) -> Result<Option<Value>, String> {
@@ -250,7 +250,7 @@ impl Contract {
 
     /// Get contract status snapshot
     pub async fn get_contract_state_snapshot(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         address: &str,
         resource_types: Vec<&str>,
     ) -> Result<HashMap<String, Option<Value>>, String> {
@@ -292,7 +292,7 @@ impl Contract {
 
     /// Estimating contract call gas fees
     pub async fn estimate_gas_cost(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         contract_call: &ContractCall,
     ) -> Result<u64, String> {
@@ -307,7 +307,7 @@ impl Contract {
 
     /// Retry failed contract calls
     pub async fn retry_failed_call(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         contract_call: ContractCall,
         max_retries: u32,
@@ -340,7 +340,7 @@ impl Contract {
 
     /// Batch resource query
     pub async fn batch_get_resources(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         address: &str,
         resource_types: Vec<&str>,
     ) -> Result<HashMap<String, Option<Value>>, String> {
@@ -370,7 +370,7 @@ impl Contract {
 
     /// Batch call contract write function
     pub async fn batch_write(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         calls: Vec<ContractCall>,
     ) -> Result<Vec<Value>, String> {
@@ -389,7 +389,7 @@ impl Contract {
 
     /// Simulate contract call execution (estimate Gas)
     pub async fn simulate_call_contract(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         contract_call: &ContractCall,
     ) -> Result<Value, String> {
@@ -416,7 +416,7 @@ impl Contract {
 
     /// Get the ABI information of the contract
     pub async fn get_contract_abi(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         module_address: &str,
         module_name: &str,
     ) -> Result<Option<Value>, String> {
@@ -425,7 +425,7 @@ impl Contract {
 
     /// Check if the contract has been published
     pub async fn is_contract_deployed(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         module_address: &str,
         module_name: &str,
     ) -> Result<bool, String> {
@@ -438,7 +438,7 @@ impl Contract {
 
     /// Get contract event list
     pub async fn get_contract_events(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         address: &str,
         event_handle: &str,
         limit: Option<u64>,
@@ -497,7 +497,7 @@ impl Contract {
 
     /// Release new contract module
     pub async fn deploy_contract(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         module_bytes: Vec<u8>,
         metadata: Option<Value>,
@@ -517,7 +517,7 @@ impl Contract {
 
     /// Update a deployed contract
     pub async fn upgrade_contract(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         module_name: &str,
         new_module_bytes: Vec<u8>,

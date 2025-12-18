@@ -1,4 +1,4 @@
-use crate::{AptosClient, types::ContractCall, wallet::Wallet};
+use crate::{Aptos, types::ContractCall, wallet::Wallet};
 use serde_json::{Value, json};
 use std::sync::Arc;
 
@@ -8,7 +8,7 @@ pub struct SystemStaking;
 impl SystemStaking {
     /// stake $apt
     pub async fn stake(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         amount: u64,
     ) -> Result<Value, String> {
@@ -26,7 +26,7 @@ impl SystemStaking {
 
     /// unstake
     pub async fn unstake(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         amount: u64,
     ) -> Result<Value, String> {
@@ -43,7 +43,7 @@ impl SystemStaking {
     }
 
     /// claim staking rewards
-    pub async fn claim(client: Arc<AptosClient>, wallet: Arc<Wallet>) -> Result<Value, String> {
+    pub async fn claim(client: Arc<Aptos>, wallet: Arc<Wallet>) -> Result<Value, String> {
         let contract_call = ContractCall {
             module_address: "0x1".to_string(),
             module_name: "staking_contract".to_string(),
@@ -58,7 +58,7 @@ impl SystemStaking {
 
     /// get staking info
     pub async fn get_staking_info(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         address: &str,
     ) -> Result<Value, String> {
         let resource_type = "0x1::staking_contract::StakingInfo";

@@ -1,5 +1,5 @@
 use crate::{
-    AptosClient, contract::Contract, event::EventData,
+    Aptos, contract::Contract, event::EventData,
     global::mainnet::protocol_address::CELLANASWAP_PROTOCOL_ADDRESS, types::ContractCall,
     wallet::Wallet,
 };
@@ -14,13 +14,13 @@ pub struct Cellana;
 
 impl Cellana {
     /// get swap events
-    pub async fn get_swap_events(client: Arc<AptosClient>) -> Result<Vec<EventData>, String> {
+    pub async fn get_swap_events(client: Arc<Aptos>) -> Result<Vec<EventData>, String> {
         let event_type = format!("{}::router::SwapEvent", CELLANASWAP_PROTOCOL_ADDRESS);
         Self::get_recent_events(client, &event_type).await
     }
 
     async fn get_recent_events(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         event_type: &str,
     ) -> Result<Vec<EventData>, String> {
         let mut all_events = Vec::new();
@@ -51,7 +51,7 @@ impl Cellana {
 
     /// add liquidity
     pub async fn add_liquidity(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         coin_x: &str,
         coin_y: &str,
@@ -80,7 +80,7 @@ impl Cellana {
 
     /// swap token
     pub async fn swap(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         from_coin: &str,
         to_coin: &str,
@@ -104,7 +104,7 @@ impl Cellana {
 
     /// get pool info
     pub async fn get_pool_info(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         coin_x: &str,
         coin_y: &str,
     ) -> Result<Value, String> {
@@ -120,7 +120,7 @@ impl Cellana {
     }
 
     /// get cell token price
-    pub async fn get_cell_price(client: Arc<AptosClient>) -> Result<f64, String> {
+    pub async fn get_cell_price(client: Arc<Aptos>) -> Result<f64, String> {
         let cell_coin = format!("{}::cell_coin::CELL", CELLANASWAP_PROTOCOL_ADDRESS);
         let apt_coin = "0x1::aptos_coin::AptosCoin";
 
@@ -129,7 +129,7 @@ impl Cellana {
 
     /// get price
     pub async fn get_price(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         from_coin: &str,
         to_coin: &str,
         amount: u64,
@@ -158,7 +158,7 @@ impl Cellana {
 
     /// listen cellana event
     pub async fn listen_events(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         event_sender: broadcast::Sender<EventData>,
         event_config: CellanaEventConfig,
     ) -> Result<(), String> {
@@ -282,7 +282,7 @@ pub struct CellanaFarming;
 impl CellanaFarming {
     /// stake lp
     pub async fn stake_lp(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         pool_id: u64,
         amount: u64,
@@ -301,7 +301,7 @@ impl CellanaFarming {
 
     /// harvest rewards
     pub async fn harvest_rewards(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         pool_id: u64,
     ) -> Result<Value, String> {

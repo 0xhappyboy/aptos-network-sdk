@@ -54,9 +54,34 @@ let result = Contract::read(Arc::clone(&client), &call).await?;
 println!("Contract result: {:?}", result.data);
 ```
 
-## Token
+## Retrieve information about the hash of a specified transaction.
 
-### Creating and registering new tokens
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_get_specific_transaction() {
+        let client = Aptos::new(AptosType::Mainnet);
+        let known_tx_hash = "0xc4da6f117be28bdf63ee455dcb845fe2c4447c5b89a9fb20e3afa92d9b8f2f50";
+        let result = client.get_transaction_info_by_hash(known_tx_hash).await;
+        match result {
+            Ok(tx) => {
+                println!("✅Find Transaction: {:?}", tx);
+                println!("Hash: {}", tx.hash);
+                println!("Version: {}", tx.version);
+            }
+            Err(e) => {
+                println!("❌ error: {}", e);
+            }
+        }
+    }
+}
+```
+
+## Creating and registering new tokens
 
 ```rust
  use crate::token::{TokenManager, TokenUtils};
@@ -92,7 +117,7 @@ println!("Contract result: {:?}", result.data);
 }
 ```
 
-### Token minting and balance inquiry
+## Token minting and balance inquiry
 
 ```rust
 use crate::{
@@ -120,7 +145,7 @@ let wallet = Arc::new(Wallet::from_private_key("your_private_key"));
 }
 ```
 
-### Token search function
+## Token search function
 
 ```rust
 use crate::token::{TokenSearchManager, TokenSearchResult};
@@ -143,7 +168,7 @@ async fn search_tokens() -> Result<(), String> {
 }
 ```
 
-### Token tool usage
+## Token tool usage
 
 ```rust
 fn token_utils_examples() {
@@ -154,7 +179,7 @@ fn token_utils_examples() {
 }
 ```
 
-### Get token trading pair information
+## Get token trading pair information
 
 ```rust
 use crate::{
@@ -176,7 +201,7 @@ let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
 }
 ```
 
-### Complete token management process
+## Complete token management process
 
 ```rust
 use crate::{
@@ -218,9 +243,7 @@ async fn complete_token_lifecycle() -> Result<(), String> {
 }
 ```
 
-## Event
-
-### Basic event listener
+## Basic event listener
 
 ```rust
 use aptos_sdk::{AptosClient, AptosClientType, Contract, event::{EventHandler, EventSubscriptionManager}};
@@ -252,7 +275,7 @@ Contract::listen_events_all_info(
 ).await?;
 ```
 
-### Event Streaming
+## Event Streaming
 
 ```rust
 use tokio::sync::broadcast;

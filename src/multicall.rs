@@ -1,5 +1,4 @@
-// src/multicall.rs
-use crate::{trade::BatchTradeHandle, types::ContractCall, wallet::Wallet, AptosClient};
+use crate::{trade::BatchTradeHandle, types::ContractCall, wallet::Wallet, Aptos};
 use futures::future::join_all;
 use serde_json::{Value, json};
 use std::{collections::HashMap, sync::Arc};
@@ -11,7 +10,7 @@ pub struct MultiContractCall;
 impl MultiContractCall {
     /// execute multiple read-only calls
     pub async fn aggregate_read(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         calls: Vec<ContractCall>,
     ) -> Result<Vec<Value>, String> {
         let mut results = Vec::new();
@@ -29,7 +28,7 @@ impl MultiContractCall {
 
     /// Contract call sequence with dependencies
     pub async fn execute_sequence(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         calls: Vec<(ContractCall, Option<String>)>,
     ) -> Result<Vec<Value>, String> {
@@ -70,7 +69,7 @@ impl MultiContractCall {
 
     /// Conditional execution execute the call only if a condition is met
     pub async fn conditional_execute(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         condition_call: ContractCall,
         execute_call: ContractCall,
@@ -92,7 +91,7 @@ impl MultiContractCall {
 
     /// Execute multiple write calls in parallel (no dependencies)
     pub async fn parallel_execute(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         calls: Vec<ContractCall>,
         max_concurrency: usize,

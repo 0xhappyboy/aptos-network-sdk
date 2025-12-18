@@ -1,6 +1,6 @@
 /// Implementation of NFT function for aptos 0x3 system library.
 use crate::{
-    AptosClient,
+    Aptos,
     global::mainnet::{
         sys_address::X_3,
         sys_module::{
@@ -22,7 +22,7 @@ pub struct NFTManager;
 impl NFTManager {
     /// create nft collection
     pub async fn create_nft_collection(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         name: &str,
         description: &str,
@@ -49,7 +49,7 @@ impl NFTManager {
 
     /// create nft
     pub async fn create_nft(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         collection: &str,
         name: &str,
@@ -85,7 +85,7 @@ impl NFTManager {
 
     /// transfer nft
     pub async fn transfer_nft(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         token_id: &str,
         recipient: &str,
@@ -108,7 +108,7 @@ impl NFTManager {
 
     /// get nft balance
     pub async fn get_nft_balance(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         address: &str,
         token_id: &str,
     ) -> Result<u64, String> {
@@ -130,7 +130,7 @@ impl NFTManager {
 
     /// get nft metedata
     pub async fn get_nft_metedata(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         creator: &str,
         collection: &str,
         name: &str,

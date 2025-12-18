@@ -14,7 +14,9 @@ pub mod types;
 pub mod wallet;
 
 use crate::{
-    global::rpc::{APTOS_DEVNET_URL, APTOS_MAINNET_URL, APTOS_TESTNET_URL}, trade::Transaction, types::*
+    global::rpc::{APTOS_DEVNET_URL, APTOS_MAINNET_URL, APTOS_TESTNET_URL},
+    trade::TransactionInfo,
+    types::*,
 };
 use reqwest::Client;
 use serde_json::Value;
@@ -25,26 +27,26 @@ const WAITING_TRANSACTION_DELAY_TIME: u64 = 500;
 
 /// client type
 #[derive(Debug, Clone)]
-pub enum AptosClientType {
+pub enum AptosType {
     Mainnet,
     Testnet,
     Devnet,
 }
 
 #[derive(Debug, Clone)]
-pub struct AptosClient {
+pub struct Aptos {
     client: Client,
     base_url: String,
 }
 
-impl AptosClient {
-    pub fn new(network: AptosClientType) -> Self {
+impl Aptos {
+    pub fn new(network: AptosType) -> Self {
         let base_url = match network {
-            AptosClientType::Mainnet => APTOS_MAINNET_URL.to_string(),
-            AptosClientType::Testnet => APTOS_TESTNET_URL.to_string(),
-            AptosClientType::Devnet => APTOS_DEVNET_URL.to_string(),
+            AptosType::Mainnet => APTOS_MAINNET_URL.to_string(),
+            AptosType::Testnet => APTOS_TESTNET_URL.to_string(),
+            AptosType::Devnet => APTOS_DEVNET_URL.to_string(),
         };
-        AptosClient {
+        Aptos {
             client: Client::new(),
             base_url,
         }
@@ -52,6 +54,12 @@ impl AptosClient {
 
     /// get chain height
     pub async fn get_chain_height(&self) -> Result<u64, String> {
+        let chain_info = self.get_chain_info().await?;
+        Ok(chain_info.block_height.parse::<u64>().unwrap_or(0))
+    }
+
+    /// get chain height
+    pub async fn get_ledger_version(&self) -> Result<u64, String> {
         let chain_info = self.get_chain_info().await?;
         Ok(chain_info.ledger_version.parse::<u64>().unwrap_or(0))
     }
@@ -141,7 +149,7 @@ impl AptosClient {
     }
 
     /// submit transaction
-    pub async fn submit_transaction(&self, txn_payload: &Value) -> Result<Transaction, String> {
+    pub async fn submit_transaction(&self, txn_payload: &Value) -> Result<TransactionInfo, String> {
         let url = format!("{}/transactions", self.base_url);
         let response = self
             .client
@@ -155,31 +163,44 @@ impl AptosClient {
             let error_msg = response.text().await.unwrap();
             return Err(format!("transaction submit failed: {}", error_msg).to_string());
         }
-        let transaction: Transaction = response.json().await.unwrap();
+        let transaction: TransactionInfo = response.json().await.unwrap();
         Ok(transaction)
     }
 
     /// get transaction info
-    pub async fn get_transaction_info(&self, txn_hash: &str) -> Result<Transaction, String> {
-        let url = format!("{}/transactions/{}", self.base_url, txn_hash);
+    pub async fn get_transaction_info_by_hash(
+        &self,
+        tx_hash: &str,
+    ) -> Result<TransactionInfo, String> {
+        let url = format!("{}/transactions/by_hash/{}", self.base_url, tx_hash);
         let response = self.client.get(&url).send().await.unwrap();
         if !response.status().is_success() {
             let error_msg = response.text().await.unwrap();
             return Err(format!("api error: {}", error_msg).to_string());
         }
-        let transaction: Transaction = response.json().await.unwrap();
+
+        let transaction: TransactionInfo = response
+            .json()
+            .await
+            .map_err(|e| format!("transaction parsing error: {:?}", e))?;
+
+        println!("交易信息:{:?}", transaction);
+
         Ok(transaction)
     }
 
     /// get transaction by version
-    pub async fn get_transaction_by_version(&self, version: u64) -> Result<Transaction, String> {
+    pub async fn get_transaction_info_by_version(
+        &self,
+        version: u64,
+    ) -> Result<TransactionInfo, String> {
         let url = format!("{}/transactions/by_version/{}", self.base_url, version);
         let response = self.client.get(&url).send().await.unwrap();
         if !response.status().is_success() {
             let error_msg = response.text().await.unwrap();
             return Err(format!("api error: {}", error_msg).to_string());
         }
-        let transaction: Transaction = response.json().await.unwrap();
+        let transaction: TransactionInfo = response.json().await.unwrap();
         Ok(transaction)
     }
 
@@ -189,7 +210,7 @@ impl AptosClient {
         address: &str,
         limit: Option<u64>,
         start: Option<u64>,
-    ) -> Result<Vec<Transaction>, String> {
+    ) -> Result<Vec<TransactionInfo>, String> {
         let limit = limit.unwrap_or(25);
         let mut url = format!(
             "{}/accounts/{}/transactions?limit={}",
@@ -203,7 +224,7 @@ impl AptosClient {
             let error_msg = response.text().await.unwrap();
             return Err(format!("api error: {}", error_msg).to_string());
         }
-        let transactions: Vec<Transaction> = response.json().await.unwrap();
+        let transactions: Vec<TransactionInfo> = response.json().await.unwrap();
         Ok(transactions)
     }
 
@@ -380,11 +401,11 @@ impl AptosClient {
         &self,
         txn_hash: &str,
         timeout_secs: u64,
-    ) -> Result<Transaction, String> {
+    ) -> Result<TransactionInfo, String> {
         let start = std::time::Instant::now();
         let timeout = Duration::from_secs(timeout_secs);
         while start.elapsed() < timeout {
-            match self.get_transaction_info(txn_hash).await {
+            match self.get_transaction_info_by_hash(txn_hash).await {
                 Ok(txn) => {
                     // transaction completed
                     return Ok(txn);
@@ -403,7 +424,7 @@ impl AptosClient {
     }
     /// determine whether the transaction is successful
     pub async fn is_transaction_successful(&self, txn_hash: &str) -> Result<bool, String> {
-        match self.get_transaction_info(txn_hash).await {
+        match self.get_transaction_info_by_hash(txn_hash).await {
             Ok(t) => Ok(t.success),
             Err(e) => Err(e),
         }
@@ -432,6 +453,29 @@ impl AptosClient {
                 } else {
                     Err(e)
                 }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_get_specific_transaction() {
+        let client = Aptos::new(AptosType::Mainnet);
+        let known_tx_hash = "0xc4da6f117be28bdf63ee455dcb845fe2c4447c5b89a9fb20e3afa92d9b8f2f50";
+        let result = client.get_transaction_info_by_hash(known_tx_hash).await;
+        match result {
+            Ok(tx) => {
+                println!("✅Find Transaction: {:?}", tx);
+                println!("Hash: {}", tx.hash);
+                println!("Version: {}", tx.version);
+            }
+            Err(e) => {
+                println!("❌ error: {}", e);
             }
         }
     }

@@ -1,4 +1,4 @@
-use crate::{AptosClient, types::ContractCall, wallet::Wallet};
+use crate::{Aptos, types::ContractCall, wallet::Wallet};
 use serde_json::{Value, json};
 use std::sync::Arc;
 
@@ -8,7 +8,7 @@ pub struct SystemBridge;
 impl SystemBridge {
     /// Bridging assets to other chains
     pub async fn bridge_asset(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         target_chain: &str,
         token_type: &str,
@@ -33,7 +33,7 @@ impl SystemBridge {
 
     /// Collect assets from other links
     pub async fn claim_bridged_asset(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         source_chain: &str,
         transaction_hash: &str,

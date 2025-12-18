@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::trade::Transaction;
+use crate::trade::TransactionInfo;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Block {
@@ -12,7 +12,7 @@ pub struct Block {
     pub block_timestamp: String,
     pub first_version: String,
     pub last_version: String,
-    pub transactions: Vec<Transaction>,
+    pub transactions: Vec<TransactionInfo>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,6 +40,7 @@ pub struct ChainInfo {
     pub ledger_version: String,
     pub ledger_timestamp: String,
     pub node_role: String,
+    pub block_height: String,
 }
 
 // #[derive(Debug, Clone, Serialize, Deserialize)]

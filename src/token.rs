@@ -1,6 +1,6 @@
 /// This module is used for token management utilities to create, register, and manage tokens on Aptos.
 use crate::{
-    AptosClient,
+    Aptos,
     dex::DexAggregator,
     global::mainnet::{
         protocol_address::{
@@ -41,11 +41,11 @@ impl TokenManager {
     /// # Example
     /// ```rust
     /// use std::sync::Arc;
-    /// use crate::{AptosClient, Wallet, token::TokenManager};
+    /// use crate::{Aptos, Wallet, token::TokenManager};
     /// use crate::global::rpc::APTOS_MAINNET_URL;
     ///
     /// async fn example() -> Result<(), String> {
-    /// let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
+    /// let client = Arc::new(Aptos::new(APTOS_MAINNET_URL));
     /// let wallet = Arc::new(Wallet::from_private_key("0x..."));
     ///
     /// let result = TokenManager::create_token(
@@ -60,7 +60,7 @@ impl TokenManager {
     /// }
     /// ```
     pub async fn create_token(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         name: &str,
         symbol: &str,
@@ -94,10 +94,10 @@ impl TokenManager {
     /// # Example
     /// ```rust
     /// use std::sync::Arc;
-    /// use crate::{AptosClient, Wallet, token::TokenManager};
+    /// use crate::{Aptos, Wallet, token::TokenManager};
     /// use crate::global::rpc::APTOS_MAINNET_URL;
     /// async fn example() -> Result<(), String> {
-    /// let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
+    /// let client = Arc::new(Aptos::new(APTOS_MAINNET_URL));
     /// let wallet = Arc::new(Wallet::from_private_key("0x..."));
     /// let token_type = "0x123::my_token::MyToken";
     ///
@@ -106,7 +106,7 @@ impl TokenManager {
     /// }
     /// ```
     pub async fn register_token(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         token_type: &str,
     ) -> Result<Value, String> {
@@ -134,11 +134,11 @@ impl TokenManager {
     /// # Example
     /// ```rust
     /// use std::sync::Arc;
-    /// use crate::{AptosClient, Wallet, token::TokenManager};
+    /// use crate::{Aptos, Wallet, token::TokenManager};
     /// use crate::global::rpc::APTOS_MAINNET_URL;
     ///
     /// async fn example() -> Result<(), String> {
-    /// let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
+    /// let client = Arc::new(Aptos::new(APTOS_MAINNET_URL));
     /// let wallet = Arc::new(Wallet::from_private_key("0x..."));
     /// let token_type = "0x123::my_token::MyToken";
     ///
@@ -153,7 +153,7 @@ impl TokenManager {
     /// }
     /// ```
     pub async fn mint_token(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         token_type: &str,
         recipient: &str,
@@ -173,7 +173,7 @@ impl TokenManager {
 
     /// burn token
     pub async fn burn_token(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         token_type: &str,
         amount: u64,
@@ -199,11 +199,11 @@ impl TokenManager {
     /// # Example
     /// ```rust
     /// use std::sync::Arc;
-    /// use crate::{AptosClient, token::TokenManager};
+    /// use crate::{Aptos, token::TokenManager};
     /// use crate::global::rpc::APTOS_MAINNET_URL;
     ///
     /// # async fn example() -> Result<(), String> {
-    /// let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
+    /// let client = Arc::new(Aptos::new(APTOS_MAINNET_URL));
     /// let token_type = "0x1::aptos_coin::AptosCoin";
     ///
     /// let metadata = TokenManager::get_token_metadata(client, token_type).await?;
@@ -212,7 +212,7 @@ impl TokenManager {
     /// }
     /// ```
     pub async fn get_token_metadata(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         token_type: &str,
     ) -> Result<Value, String> {
         let resource_type = format!("0x1::coin::CoinInfo<{}>", token_type);
@@ -233,11 +233,11 @@ impl TokenManager {
     /// # Example
     /// ```rust
     /// use std::sync::Arc;
-    /// use crate::{AptosClient, token::TokenManager};
+    /// use crate::{Aptos, token::TokenManager};
     /// use crate::global::rpc::APTOS_MAINNET_URL;
     ///
     /// async fn example() -> Result<(), String> {
-    /// let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
+    /// let client = Arc::new(Aptos::new(APTOS_MAINNET_URL));
     /// let address = "0x123...";
     /// let token_type = "0x1::aptos_coin::AptosCoin";
     ///
@@ -247,7 +247,7 @@ impl TokenManager {
     /// }
     /// ```
     pub async fn get_token_balance(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         address: &str,
         token_type: &str,
     ) -> Result<u64, String> {
@@ -337,11 +337,11 @@ impl TokenSearchManager {
     /// # Example
     /// ```rust
     /// use std::sync::Arc;
-    /// use crate::{AptosClient, token::TokenSearchManager};
+    /// use crate::{Aptos, token::TokenSearchManager};
     /// use crate::global::rpc::APTOS_MAINNET_URL;
     ///
     /// async fn example() -> Result<(), String> {
-    /// let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
+    /// let client = Arc::new(Aptos::new(APTOS_MAINNET_URL));
     ///
     /// let results = TokenSearchManager::get_token_by_symbol(client, "USDC").await?;
     /// for token in results {
@@ -350,7 +350,7 @@ impl TokenSearchManager {
     /// Ok(())
     /// }
     pub async fn get_token_by_symbol(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         symbol: &str,
     ) -> Result<Vec<TokenSearchResult>, String> {
         let mut results = Vec::new();
@@ -473,7 +473,7 @@ impl TokenSearchManager {
 
     /// get coin infos by symbol
     async fn get_coin_infos_by_symbol(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         symbol: &str,
     ) -> Result<Vec<TokenSearchResult>, String> {
         let mut results = Vec::new();
@@ -531,7 +531,7 @@ impl TokenSearchManager {
 
     /// search tokens from pools
     async fn search_tokens_from_pools(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         search_symbol: &str,
     ) -> Result<Vec<TokenSearchResult>, String> {
         let mut results = Vec::new();
@@ -587,7 +587,7 @@ impl TokenSearchManager {
 
     /// get token info from type
     async fn get_token_info_from_type(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         token_type: &str,
         search_symbol: &str,
     ) -> Option<TokenSearchResult> {
@@ -637,11 +637,11 @@ impl TokenSearchManager {
     /// # Example
     /// ```rust
     /// use std::sync::Arc;
-    /// use crate::{AptosClient, token::TokenSearchManager};
+    /// use crate::{Aptos, token::TokenSearchManager};
     /// use crate::global::rpc::APTOS_MAINNET_URL;
     ///
     /// async fn example() -> Result<(), String> {
-    /// let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
+    /// let client = Arc::new(Aptos::new(APTOS_MAINNET_URL));
     ///
     /// let top_tokens = TokenSearchManager::get_top_token_vec(client).await?;
     /// for token in top_tokens {
@@ -650,7 +650,7 @@ impl TokenSearchManager {
     /// Ok(())
     /// }
     /// ```
-    pub async fn get_top_token_vec(client: Arc<AptosClient>) -> Result<Vec<TopToken>, String> {
+    pub async fn get_top_token_vec(client: Arc<Aptos>) -> Result<Vec<TopToken>, String> {
         let mut top_tokens = Vec::new();
         let base_token = "0x1::aptos_coin::AptosCoin";
         if let Ok(resources) = client
@@ -719,7 +719,7 @@ impl TokenSearchManager {
 
     /// estimate token price
     async fn estimate_token_price(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         token_address: &str,
     ) -> Result<f64, String> {
         let base_token = "0x1::aptos_coin::AptosCoin";
@@ -729,7 +729,7 @@ impl TokenSearchManager {
     }
 
     /// estimate volume
-    async fn estimate_volume(client: Arc<AptosClient>, token_address: &str) -> Result<u64, String> {
+    async fn estimate_volume(client: Arc<Aptos>, token_address: &str) -> Result<u64, String> {
         let volume = match token_address {
             "0x1::aptos_coin::AptosCoin" => 5_000_000_000, // apt
             addr if addr.contains("usd") || addr.contains("stable") => 2_000_000_000,
@@ -748,11 +748,11 @@ impl TokenSearchManager {
     /// # Example
     /// ```rust
     /// use std::sync::Arc;
-    /// use crate::{AptosClient, token::TokenSearchManager};
+    /// use crate::{Aptos, token::TokenSearchManager};
     /// use crate::global::rpc::APTOS_MAINNET_URL;
     ///
     /// async fn example() -> Result<(), String> {
-    /// let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
+    /// let client = Arc::new(Aptos::new(APTOS_MAINNET_URL));
     /// let token_address = "0x1::aptos_coin::AptosCoin";
     ///
     /// let pairs = TokenSearchManager::get_token_trading_pairs(client, token_address).await?;
@@ -763,7 +763,7 @@ impl TokenSearchManager {
     /// }
     /// ```
     pub async fn get_token_trading_pairs(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         token_address: &str,
     ) -> Result<Vec<TradePair>, String> {
         DexAggregator::find_token_liquidity_pools(client, token_address)

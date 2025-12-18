@@ -14,6 +14,12 @@
 <a href="./README_zh-CN.md">简体中文</a> | <a href="./README.md">English</a>
 </p>
 
+## 依赖
+
+```bash
+cargo add aptos-network-sdk
+```
+
 ## 快速启动
 
 ```rust
@@ -49,9 +55,34 @@ let result = Contract::read(Arc::clone(&client), &call).await?;
 println!("合约结果: {:?}", result.data);
 ```
 
-## 代币
+## 获取指定交易 hash 的信息.
 
-### 创建和注册新代币
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_get_specific_transaction() {
+        let client = Aptos::new(AptosType::Mainnet);
+        let known_tx_hash = "0xc4da6f117be28bdf63ee455dcb845fe2c4447c5b89a9fb20e3afa92d9b8f2f50";
+        let result = client.get_transaction_info_by_hash(known_tx_hash).await;
+        match result {
+            Ok(tx) => {
+                println!("✅Find Transaction: {:?}", tx);
+                println!("Hash: {}", tx.hash);
+                println!("Version: {}", tx.version);
+            }
+            Err(e) => {
+                println!("❌ error: {}", e);
+            }
+        }
+    }
+}
+```
+
+## 创建和注册新代币
 
 ```rust
 use crate::token::{TokenManager, TokenUtils};
@@ -97,7 +128,7 @@ let wallet = Arc::new(Wallet::from_private_key("your_private_key"));
 }
 ```
 
-### 2. 代币铸造和余额查询
+## 代币铸造和余额查询
 
 ```rust
 use crate::{
@@ -132,7 +163,7 @@ let wallet = Arc::new(Wallet::from_private_key("your_private_key"));
 }
 ```
 
-### 代币搜索功能
+## 代币搜索功能
 
 ```rust
 use crate::token::{TokenSearchManager, TokenSearchResult};
@@ -170,7 +201,7 @@ async fn search_tokens() -> Result<(), String> {
 }
 ```
 
-### 代币工具使用
+## 代币工具使用
 
 ```rust
 // 代币工具使用示例
@@ -188,7 +219,7 @@ fn token_utils_examples() {
 }
 ```
 
-### 获取代币交易对信息
+## 获取代币交易对信息
 
 ```rust
 use crate::{
@@ -213,7 +244,7 @@ let client = Arc::new(AptosClient::new(APTOS_MAINNET_URL));
 }
 ```
 
-### 完整的代币管理流程
+## 完整的代币管理流程
 
 ```rust
 use crate::{
@@ -265,9 +296,7 @@ async fn complete_token_lifecycle() -> Result<(), String> {
 }
 ```
 
-## 事件
-
-### 基础事件监听
+## 基础事件监听
 
 ```rust
 use aptos_sdk::{AptosClient, AptosClientType, Contract, event::{EventHandler, EventSubscriptionManager}};
@@ -299,7 +328,7 @@ Contract::listen_events_all_info(
 ).await?;
 ```
 
-### 事件流处理
+## 事件流处理
 
 ```rust
 use tokio::sync::broadcast;

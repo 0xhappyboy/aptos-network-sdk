@@ -1,5 +1,5 @@
 use crate::{
-    AptosClient, event::EventData, global::mainnet::protocol_address::ANIMESWAP_PROTOCOL_ADDRESS,
+    Aptos, event::EventData, global::mainnet::protocol_address::ANIMESWAP_PROTOCOL_ADDRESS,
     types::ContractCall, wallet::Wallet,
 };
 use serde_json::{Value, json};
@@ -11,12 +11,12 @@ pub struct AnimeSwap;
 
 impl AnimeSwap {
     /// get swap event
-    pub async fn get_swap_events(client: Arc<AptosClient>) -> Result<Vec<EventData>, String> {
+    pub async fn get_swap_events(client: Arc<Aptos>) -> Result<Vec<EventData>, String> {
         let event_type = format!("{}::swap::SwapEvent", ANIMESWAP_PROTOCOL_ADDRESS);
         Self::get_events_by_time_range(client, &event_type).await
     }
     async fn get_events_by_time_range(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         event_type: &str,
     ) -> Result<Vec<EventData>, String> {
         let mut all_events = Vec::new();
@@ -55,7 +55,7 @@ impl AnimeSwap {
     }
     /// add liquidity
     pub async fn add_liquidity(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         coin_a: &str,
         coin_b: &str,
@@ -86,7 +86,7 @@ impl AnimeSwap {
 
     /// swap exact tokens for tokens
     pub async fn swap_exact_tokens_for_tokens(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         path: Vec<&str>,
         amount_in: u64,
@@ -115,7 +115,7 @@ impl AnimeSwap {
 
     /// get reserves
     pub async fn get_reserves(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         coin_a: &str,
         coin_b: &str,
     ) -> Result<(u64, u64), String> {
@@ -149,7 +149,7 @@ impl AnimeSwap {
 
     /// listen events
     pub async fn listen_events(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         event_sender: broadcast::Sender<EventData>,
         filters: AnimeSwapEventFilters,
     ) -> Result<(), String> {
@@ -289,7 +289,7 @@ pub struct AnimeSwapPriceCalculator;
 impl AnimeSwapPriceCalculator {
     /// find the best transaction path
     pub async fn find_best_path(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         from_token: &str,
         to_token: &str,
         amount_in: u64,

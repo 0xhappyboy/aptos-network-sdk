@@ -5,7 +5,7 @@ pub mod liquidswap;
 pub mod pancakeswap;
 pub mod thala;
 use crate::{
-    AptosClient,
+    Aptos,
     dex::{
         animeswap::{AnimeSwap, AnimeSwapEventFilters},
         auxswap::AuxExchange,
@@ -83,7 +83,7 @@ pub struct DexAggregator;
 impl DexAggregator {
     /// Find the best price across all DEXs
     pub async fn find_best_swap(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         from_token: &str,
         to_token: &str,
         amount_in: u64,
@@ -129,7 +129,7 @@ impl DexAggregator {
 
     /// Perform optimal exchange
     pub async fn exe_best_swap(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         from_token: &str,
         to_token: &str,
@@ -213,7 +213,7 @@ impl DexAggregator {
 
     /// Compare prices across multiple DEXs in batches
     pub async fn compare_all_dex_prices(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         from_token: &str,
         to_token: &str,
         amount_in: u64,
@@ -255,7 +255,7 @@ impl DexAggregator {
 
     // How to obtain quotes from various DEXs
     async fn get_liquidswap_quote(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         from_token: &str,
         to_token: &str,
         amount_in: u64,
@@ -275,7 +275,7 @@ impl DexAggregator {
     }
 
     async fn get_animeswap_quote(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         from_token: &str,
         to_token: &str,
         amount_in: u64,
@@ -300,7 +300,7 @@ impl DexAggregator {
     }
 
     async fn get_thala_quote(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         from_token: &str,
         to_token: &str,
         amount_in: u64,
@@ -320,7 +320,7 @@ impl DexAggregator {
     }
 
     async fn get_pancakeswap_quote(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         from_token: &str,
         to_token: &str,
         amount_in: u64,
@@ -345,7 +345,7 @@ impl DexAggregator {
     }
 
     async fn get_cellana_quote(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         from_token: &str,
         to_token: &str,
         amount_in: u64,
@@ -365,7 +365,7 @@ impl DexAggregator {
     }
 
     async fn get_aux_quote(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         from_token: &str,
         to_token: &str,
         amount_in: u64,
@@ -502,7 +502,7 @@ impl DexAggregator {
 
     /// Get the price of a specified token in all DEXs (relative to APT)
     pub async fn get_token_price(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         token_address: &str,
     ) -> Result<Vec<TokenPrice>, String> {
         let apt_coin = "0x1::aptos_coin::AptosCoin";
@@ -564,7 +564,7 @@ impl DexAggregator {
 
     /// Get token prices on a specific DEX
     async fn get_token_price_on_dex(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         dex_name: &str,
         token_address: &str,
         base_token: &str,
@@ -613,7 +613,7 @@ impl DexAggregator {
 
     /// Get the total liquidity of the liquidity pool
     async fn get_pool_liquidity(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         dex_name: &str,
         token_a: &str,
         token_b: &str,
@@ -677,7 +677,7 @@ impl DexAggregator {
 
     /// Find the liquidity pools of a token across all DEXs
     pub async fn find_token_liquidity_pools(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         token_address: &str,
     ) -> Result<Vec<LiquidityPool>, String> {
         let common_tokens = vec![APT, USDC, USDT, WORMHOLE_USDC];
@@ -742,7 +742,7 @@ impl DexAggregator {
 
     /// Check if a liquidity pool exists on a specific DEX
     async fn check_pool_exists(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         dex_name: &str,
         token_a: &str,
         token_b: &str,
@@ -768,7 +768,7 @@ impl DexAggregator {
 
     /// Get the metadata information of the token
     pub async fn get_token_metadata(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         token_address: &str,
     ) -> Result<TokenMetadata, String> {
         let coin_info_type = format!("0x1::coin::CoinInfo<{}>", token_address);
@@ -809,7 +809,7 @@ impl DexAggregator {
     }
 
     pub async fn get_top_prices_comparison(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
     ) -> Result<Vec<TokenPriceComparison>, String> {
         let popular_pairs = vec![
             (USDC, APT), // USDC/APT
@@ -890,7 +890,7 @@ impl DexEventMonitor {
     }
     pub async fn start_monitoring_all_dexes(
         &mut self,
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
     ) -> Result<(), String> {
         let dexes = vec![
             "Liquidswap",
@@ -930,7 +930,7 @@ impl DexEventMonitor {
     }
 
     fn start_dex_monitoring_task(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         dex_name: &str,
         sender: Option<broadcast::Sender<EventData>>,
     ) {
@@ -1009,7 +1009,7 @@ pub struct DexAnalytics;
 impl DexAnalytics {
     /// analyze dex volume distribution
     pub async fn analyze_dex_volume_distribution(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         _time_period_hours: u64,
     ) -> Result<HashMap<String, u64>, String> {
         let mut volume_map = HashMap::new();
@@ -1058,7 +1058,7 @@ impl DexAnalytics {
     }
 
     /// get liquidswap volume
-    async fn get_liquidswap_volume(client: Arc<AptosClient>) -> Result<u64, String> {
+    async fn get_liquidswap_volume(client: Arc<Aptos>) -> Result<u64, String> {
         let events = crate::dex::liquidswap::Liquidswap::get_swap_events(client).await?;
         let total_volume = events
             .iter()
@@ -1082,7 +1082,7 @@ impl DexAnalytics {
     }
 
     /// get thala volume
-    async fn get_thala_volume(client: Arc<AptosClient>) -> Result<u64, String> {
+    async fn get_thala_volume(client: Arc<Aptos>) -> Result<u64, String> {
         let events = crate::dex::thala::Thala::get_swap_events(client).await?;
         let total_volume = events
             .iter()
@@ -1111,7 +1111,7 @@ impl DexAnalytics {
     }
 
     /// get pancakeswap volume
-    async fn get_pancakeswap_volume(client: Arc<AptosClient>) -> Result<u64, String> {
+    async fn get_pancakeswap_volume(client: Arc<Aptos>) -> Result<u64, String> {
         let events = crate::dex::pancakeswap::PancakeSwap::get_swap_events(client).await?;
         let total_volume = events
             .iter()
@@ -1145,7 +1145,7 @@ impl DexAnalytics {
     }
 
     /// get animeswap volume
-    async fn get_animeswap_volume(client: Arc<AptosClient>) -> Result<u64, String> {
+    async fn get_animeswap_volume(client: Arc<Aptos>) -> Result<u64, String> {
         let events = crate::dex::animeswap::AnimeSwap::get_swap_events(client).await?;
         let total_volume = events
             .iter()
@@ -1174,7 +1174,7 @@ impl DexAnalytics {
     }
 
     /// get cellana volume
-    async fn get_cellana_volume(client: Arc<AptosClient>) -> Result<u64, String> {
+    async fn get_cellana_volume(client: Arc<Aptos>) -> Result<u64, String> {
         let events = crate::dex::cellana::Cellana::get_swap_events(client).await?;
         let total_volume = events
             .iter()
@@ -1203,7 +1203,7 @@ impl DexAnalytics {
     }
 
     /// get aux volume
-    async fn get_aux_volume(client: Arc<AptosClient>) -> Result<u64, String> {
+    async fn get_aux_volume(client: Arc<Aptos>) -> Result<u64, String> {
         let events = crate::dex::auxswap::AuxExchange::get_swap_events(client).await?;
         let total_volume = events
             .iter()
@@ -1233,7 +1233,7 @@ impl DexAnalytics {
 
     /// get liquidity depth
     pub async fn get_liquidity_depth(
-        _client: Arc<AptosClient>,
+        _client: Arc<Aptos>,
         token_a: &str,
         token_b: &str,
     ) -> Result<Vec<DexLiquidity>, String> {
@@ -1336,7 +1336,7 @@ impl DexUtils {
     }
 
     pub async fn validate_token_pair(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         token_a: &str,
         token_b: &str,
     ) -> Result<Vec<String>, String> {

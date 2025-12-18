@@ -1,5 +1,5 @@
 /// Calculating the optimal gas price
-pub async fn cal_optimal_gas_price(client: &crate::AptosClient) -> Result<u64, String> {
+pub async fn cal_optimal_gas_price(client: &crate::Aptos) -> Result<u64, String> {
     let gas_price = client.estimate_gas_price().await?;
     Ok((gas_price as f64 * 1.1) as u64)
 }

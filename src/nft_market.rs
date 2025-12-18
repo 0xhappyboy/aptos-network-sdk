@@ -2,7 +2,7 @@ use crate::global::mainnet::nft_market::{
     AUX_EXCHANGE, BLUEMOVE, MERCATO, PANCAKE_SWAP_NFT, SOUFFL3, TOPAZ, TRADEPORT, WAPAL,
 };
 // nft_marketplace.rs
-use crate::{AptosClient, types::ContractCall, wallet::Wallet};
+use crate::{Aptos, types::ContractCall, wallet::Wallet};
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -63,7 +63,7 @@ pub struct NFTPurchaseResult {
 impl NFTMarketplaceAggregator {
     /// Search NFT listings across all marketplaces
     pub async fn search_nft_listings(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         token_id: &str,
     ) -> Result<Vec<NFTListing>, String> {
         let mut all_listings = Vec::new();
@@ -81,7 +81,7 @@ impl NFTMarketplaceAggregator {
 
     /// Get NFT listings from specific marketplace
     async fn get_marketplace_listings(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         marketplace_address: &str,
         token_id: &str,
     ) -> Result<Vec<NFTListing>, String> {
@@ -119,7 +119,7 @@ impl NFTMarketplaceAggregator {
 
     /// Parse Topaz marketplace listings
     async fn parse_topaz_listings(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         token_id: &str,
     ) -> Result<Vec<NFTListing>, String> {
         let mut listings = Vec::new();
@@ -140,7 +140,7 @@ impl NFTMarketplaceAggregator {
 
     /// Parse Souffl3 marketplace listings
     async fn parse_souffl3_listings(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         token_id: &str,
     ) -> Result<Vec<NFTListing>, String> {
         let mut listings = Vec::new();
@@ -163,7 +163,7 @@ impl NFTMarketplaceAggregator {
 
     /// Parse BlueMove marketplace listings
     async fn parse_bluemove_listings(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         token_id: &str,
     ) -> Result<Vec<NFTListing>, String> {
         let mut listings = Vec::new();
@@ -183,7 +183,7 @@ impl NFTMarketplaceAggregator {
 
     /// Parse Mercato marketplace listings
     async fn parse_mercato_listings(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         token_id: &str,
     ) -> Result<Vec<NFTListing>, String> {
         let mut listings = Vec::new();
@@ -205,7 +205,7 @@ impl NFTMarketplaceAggregator {
 
     /// Parse AUX Exchange listings
     async fn parse_aux_listings(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         token_id: &str,
     ) -> Result<Vec<NFTListing>, String> {
         let mut listings = Vec::new();
@@ -227,7 +227,7 @@ impl NFTMarketplaceAggregator {
 
     /// Parse PancakeSwap NFT listings
     async fn parse_pancake_listings(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         token_id: &str,
     ) -> Result<Vec<NFTListing>, String> {
         let mut listings = Vec::new();
@@ -249,7 +249,7 @@ impl NFTMarketplaceAggregator {
 
     /// Parse Tradeport marketplace listings
     async fn parse_tradeport_listings(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         token_id: &str,
     ) -> Result<Vec<NFTListing>, String> {
         let mut listings = Vec::new();
@@ -275,7 +275,7 @@ impl NFTMarketplaceAggregator {
 
     /// Parse Wapal marketplace listings
     async fn parse_wapal_listings(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         token_id: &str,
     ) -> Result<Vec<NFTListing>, String> {
         let mut listings = Vec::new();
@@ -421,7 +421,7 @@ impl NFTMarketplaceAggregator {
 
     /// Get best price (cross-market comparison)
     pub async fn get_best_price(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         token_id: &str,
     ) -> Result<Option<NFTListing>, String> {
         let listings = Self::search_nft_listings(client, token_id).await?;
@@ -430,7 +430,7 @@ impl NFTMarketplaceAggregator {
 
     /// Purchase NFT on specified marketplace
     pub async fn purchase_nft(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         listing: &NFTListing,
     ) -> Result<NFTPurchaseResult, String> {
@@ -562,7 +562,7 @@ impl NFTMarketplaceAggregator {
 
     /// List NFT on multiple marketplaces
     pub async fn list_nft_on_markets(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         token_id: &str,
         price: u64,
@@ -589,7 +589,7 @@ impl NFTMarketplaceAggregator {
 
     /// List NFT on single marketplace
     pub async fn list_nft_on_market(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         token_id: &str,
         price: u64,
@@ -658,7 +658,7 @@ impl NFTMarketplaceAggregator {
 
     /// Get marketplace statistics
     pub async fn get_market_stats(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         collection: &str,
     ) -> Result<HashMap<String, MarketStats>, String> {
         let mut stats = HashMap::new();
@@ -673,7 +673,7 @@ impl NFTMarketplaceAggregator {
     }
 
     async fn get_single_market_stats(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         market_address: &str,
         collection: &str,
     ) -> Result<MarketStats, String> {
@@ -701,14 +701,14 @@ pub struct NFTMarketUtils;
 
 impl NFTMarketUtils {
     /// Verify if NFT is delisted from all marketplaces
-    pub async fn verify_delisted(client: Arc<AptosClient>, token_id: &str) -> Result<bool, String> {
+    pub async fn verify_delisted(client: Arc<Aptos>, token_id: &str) -> Result<bool, String> {
         let listings = NFTMarketplaceAggregator::search_nft_listings(client, token_id).await?;
         Ok(listings.is_empty())
     }
 
     /// Get NFT listing status across all marketplaces
     pub async fn get_listing_status(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         token_id: &str,
     ) -> Result<HashMap<String, bool>, String> {
         let mut status = HashMap::new();
@@ -727,7 +727,7 @@ impl NFTMarketUtils {
 
     /// Get cross-market floor price
     pub async fn get_cross_market_floor_price(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         collection: &str,
     ) -> Result<u64, String> {
         let mut min_price = u64::MAX;

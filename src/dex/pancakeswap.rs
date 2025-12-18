@@ -1,6 +1,6 @@
 /// The implementation module of pancakeswap complete interactive logic.
 use crate::{
-    AptosClient,
+    Aptos,
     event::EventData,
     global::mainnet::{
         protocol_address::PANCAKESWAP_FACTORY_PROTOCOL_ADDRESS,
@@ -18,13 +18,13 @@ pub struct PancakeSwap;
 
 impl PancakeSwap {
     /// get swap events
-    pub async fn get_swap_events(client: Arc<AptosClient>) -> Result<Vec<EventData>, String> {
+    pub async fn get_swap_events(client: Arc<Aptos>) -> Result<Vec<EventData>, String> {
         let event_type = format!("{}::swap::SwapEvent", PANCAKESWAP_FACTORY_PROTOCOL_ADDRESS);
         Self::get_recent_events(client, &event_type).await
     }
 
     async fn get_recent_events(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         event_type: &str,
     ) -> Result<Vec<EventData>, String> {
         let mut all_events = Vec::new();
@@ -58,7 +58,7 @@ impl PancakeSwap {
 
     /// add liquidity
     pub async fn add_liquidity(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         coin_a: &str,
         coin_b: &str,
@@ -90,7 +90,7 @@ impl PancakeSwap {
 
     /// remove liquidity
     pub async fn remove_liquidity(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         coin_a: &str,
         coin_b: &str,
@@ -120,7 +120,7 @@ impl PancakeSwap {
 
     /// swap exact tokens for tokens
     pub async fn swap_exact_tokens_for_tokens(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         amount_in: u64,
         amount_out_min: u64,
@@ -150,7 +150,7 @@ impl PancakeSwap {
 
     /// get reserves
     pub async fn get_reserves(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         coin_a: &str,
         coin_b: &str,
     ) -> Result<(u64, u64), String> {
@@ -210,7 +210,7 @@ impl PancakeSwap {
     }
 
     /// get cake price
-    pub async fn get_cake_price(client: Arc<AptosClient>) -> Result<f64, String> {
+    pub async fn get_cake_price(client: Arc<Aptos>) -> Result<f64, String> {
         let (reserve_cake, reserve_apt) = Self::get_reserves(client, CAKE, APT).await?;
         if reserve_cake == 0 {
             return Ok(0.0);
@@ -220,7 +220,7 @@ impl PancakeSwap {
 
     /// listen events
     pub async fn listen_events(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         event_sender: broadcast::Sender<EventData>,
         filters: PancakeSwapEventFilters,
     ) -> Result<(), String> {

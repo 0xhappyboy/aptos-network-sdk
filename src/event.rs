@@ -1,5 +1,4 @@
-// src/event_processor.rs
-use crate::{AptosClient, types::Event};
+use crate::{Aptos, types::Event};
 use serde_json::Value;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::sync::broadcast;
@@ -19,7 +18,7 @@ pub struct EventData {
 impl EventHandler {
     /// Real-time monitoring of event streams
     pub async fn start_event_stream(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         address: String,
         event_handle: String,
         event_sender: broadcast::Sender<EventData>,
@@ -63,7 +62,7 @@ impl EventHandler {
 
     /// Event stream containing transaction information
     pub async fn start_event_stream_with_tx_info(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         address: String,
         event_handle: String,
         event_sender: broadcast::Sender<EventData>,

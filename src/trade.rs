@@ -1,5 +1,5 @@
 use crate::{
-    AptosClient,
+    Aptos,
     types::{ContractCall, EntryFunctionPayload},
     wallet::Wallet,
 };
@@ -19,7 +19,7 @@ pub struct Trade;
 impl Trade {
     /// build transfer info
     pub async fn create_transfer_tx(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         sender: Arc<Wallet>,
         recipient: &str,
         amount: u64,
@@ -64,7 +64,7 @@ impl Trade {
 
     /// build token transfer
     pub async fn create_token_transfer_tx(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         sender: Wallet,
         recipient: &str,
         token_type: &str,
@@ -110,7 +110,7 @@ impl Trade {
 
     /// create sign and submit transfer tx
     pub async fn create_sign_submit_transfer_tx(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         recipient: &str,
         amount: u64,
@@ -163,7 +163,7 @@ impl Trade {
 
     /// build call contract tx
     pub async fn create_call_contract_tx(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         sender: Arc<Wallet>,
         sequence_number: Option<u64>,
         expiration_secs: u64,
@@ -201,7 +201,7 @@ impl Trade {
 
     /// create customize call contract tx
     pub async fn create_customize_call_contract_tx(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         module_address: &str,
         module_name: &str,
         function_name: &str,
@@ -278,7 +278,7 @@ impl Trade {
     /// ```rust
     /// use std::sync::Arc;
     ///
-    /// let client = Arc::new(AptosClient::new(AptosClientType::Mainnet));
+    /// let client = Arc::new(Aptos::new(AptosType::Mainnet));
     /// let query = TransactionQuery {
     ///     start: Some(0),
     ///     limit: Some(10)
@@ -290,10 +290,10 @@ impl Trade {
     /// }
     /// ```
     pub async fn get_address_transactions(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         address: &str,
         query: TransactionQuery,
-    ) -> Result<Vec<Transaction>, String> {
+    ) -> Result<Vec<TransactionInfo>, String> {
         client
             .get_account_transaction_vec(address, query.limit, query.start)
             .await
@@ -316,7 +316,7 @@ impl Trade {
     /// ```
     /// use std::sync::Arc;
     ///
-    /// let client = Arc::new(AptosClient::new(AptosClientType::Mainnet));
+    /// let client = Arc::new(Aptos::new(AptosType::Mainnet));
     ///
     /// // Find all transactions where 0x1234... and 0x5678... interacted
     /// match Trade::get_transactions_involving_both_addresses(
@@ -334,15 +334,15 @@ impl Trade {
     /// ```
     ///
     pub async fn get_transactions_involving_both_addresses(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         address_a: &str,
         address_b: &str,
         limit: Option<u64>,
         start: Option<u64>,
-    ) -> Result<Vec<Transaction>, String> {
+    ) -> Result<Vec<TransactionInfo>, String> {
         let query = TransactionQuery { start, limit };
         let transactions = Self::get_address_transactions(client, address_a, query).await?;
-        let filtered_transactions: Vec<Transaction> = transactions
+        let filtered_transactions: Vec<TransactionInfo> = transactions
             .into_iter()
             .filter(|txn| Self::transaction_involves_address(txn, address_b))
             .collect();
@@ -370,7 +370,7 @@ impl Trade {
     /// ```
     /// use std::sync::Arc;
     ///
-    /// let client = Arc::new(AptosClient::new(AptosClientType::Mainnet));
+    /// let client = Arc::new(Aptos::new(AptosType::Mainnet));
     ///
     /// // Find all payments from Alice (0x5678...) to Bob (0x1234...)
     /// match Trade::get_transactions_by_recipient_sender(
@@ -393,16 +393,16 @@ impl Trade {
     /// ```
     ///
     pub async fn get_transactions_by_recipient_sender(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         address_a: &str, // Receiver
         address_b: &str, // Payer
         limit: Option<u64>,
         start: Option<u64>,
-    ) -> Result<Vec<Transaction>, String> {
+    ) -> Result<Vec<TransactionInfo>, String> {
         let query = TransactionQuery { start, limit };
         let transactions =
             Self::get_address_transactions(Arc::clone(&client), address_b, query).await?;
-        let filtered_transactions: Vec<Transaction> = transactions
+        let filtered_transactions: Vec<TransactionInfo> = transactions
             .into_iter()
             .filter(|txn| Self::is_transfer_from_to(txn, address_b, address_a))
             .collect();
@@ -410,7 +410,7 @@ impl Trade {
     }
 
     /// Check if the transaction involves the specified address
-    fn transaction_involves_address(transaction: &Transaction, address: &str) -> bool {
+    fn transaction_involves_address(transaction: &TransactionInfo, address: &str) -> bool {
         match &transaction.transaction_type {
             TransactionType::UserTransaction(user_txn) => {
                 // Check sender
@@ -430,7 +430,7 @@ impl Trade {
 
     /// Check if the transaction is a transfer from from_address to to_address
     fn is_transfer_from_to(
-        transaction: &Transaction,
+        transaction: &TransactionInfo,
         from_address: &str,
         to_address: &str,
     ) -> bool {
@@ -476,7 +476,7 @@ impl Trade {
     }
 
     /// Get user transaction details
-    pub fn get_user_transaction(transaction: &Transaction) -> Option<&UserTransaction> {
+    pub fn get_user_transaction(transaction: &TransactionInfo) -> Option<&UserTransaction> {
         match &transaction.transaction_type {
             TransactionType::UserTransaction(user_txn) => Some(user_txn),
             _ => None,
@@ -484,7 +484,7 @@ impl Trade {
     }
 
     /// Get transfer information in the transaction
-    pub fn get_transfer_info(transaction: &Transaction) -> Option<TransferInfo> {
+    pub fn get_transfer_info(transaction: &TransactionInfo) -> Option<TransferInfo> {
         let user_txn = Self::get_user_transaction(transaction)?;
         if user_txn.payload.function.ends_with("::coin::transfer") {
             if user_txn.payload.arguments.len() >= 2 {
@@ -512,7 +512,7 @@ impl Trade {
 
     /// Get events of a specific type in transaction events
     pub fn get_events_by_type<'a>(
-        transaction: &'a Transaction,
+        transaction: &'a TransactionInfo,
         event_type: &str,
     ) -> Vec<&'a Event> {
         transaction
@@ -523,7 +523,7 @@ impl Trade {
     }
 
     /// Analyze resource changes in transactions
-    pub fn analyze_resource_changes(transaction: &Transaction) -> ResourceChanges {
+    pub fn analyze_resource_changes(transaction: &TransactionInfo) -> ResourceChanges {
         let mut changes = ResourceChanges::default();
         for change in &transaction.changes {
             match change.change_type.as_str() {
@@ -554,7 +554,7 @@ pub struct BatchTradeHandle;
 impl BatchTradeHandle {
     /// Processing batch transactions with concurrency control
     pub async fn process_batch(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         calls: Vec<ContractCall>,
         concurrency: usize,
@@ -591,7 +591,7 @@ impl BatchTradeHandle {
 
     /// Read resources in batches
     pub async fn batch_get_resources(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         addresses: Vec<String>,
         resource_types: Vec<&str>,
     ) -> Result<HashMap<String, HashMap<String, Option<Value>>>, String> {
@@ -619,35 +619,29 @@ impl BatchTradeHandle {
 /// Represents a transaction on the Aptos blockchain
 /// Contains all relevant information about a transaction including metadata, payload, and execution results
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Transaction {
-    /// The version number of the transaction (global sequence number)
+pub struct TransactionInfo {
     pub version: String,
-    /// The hash of the transaction (unique identifier)
     pub hash: String,
-    /// Hash representing the state changes caused by this transaction
+    #[serde(default)]
     pub state_change_hash: String,
-    /// Root hash of the event accumulator after this transaction
+    #[serde(default)]
     pub event_root_hash: String,
-    /// Hash of the state checkpoint (if this is a checkpoint transaction)
     pub state_checkpoint_hash: Option<String>,
-    /// Amount of gas used by the transaction
+    #[serde(default)]
     pub gas_used: String,
-    /// Whether the transaction executed successfully
     pub success: bool,
-    /// Status message from the virtual machine after execution
+    #[serde(default)]
     pub vm_status: String,
-    /// Root hash of the transaction accumulator
+    #[serde(default)]
     pub accumulator_root_hash: String,
-    /// List of state changes (resources modified, tables updated, etc.)
+    #[serde(default)]
     pub changes: Vec<WriteSetChange>,
-    /// Events emitted during transaction execution
+    #[serde(default)]
     pub events: Vec<Event>,
-    /// Timestamp when the transaction was executed (in microseconds)
-    pub timestamp: String,
-    /// Maximum gas amount that could be used for this transaction
-    pub max_gas_amount: String,
-    /// The specific type of transaction and its payload data
-    /// Uses serde flatten to include all transaction-type-specific fields
+    #[serde(default)]
+    pub timestamp: Option<String>,
+    #[serde(default)]
+    pub max_gas_amount: Option<String>,
     #[serde(flatten)]
     pub transaction_type: TransactionType,
 }
@@ -683,9 +677,12 @@ pub struct PendingTransaction {
 pub struct UserTransaction {
     pub sender: String,
     pub sequence_number: String,
-    pub max_gas_amount: String,
-    pub gas_unit_price: String,
-    pub expiration_timestamp_secs: String,
+    #[serde(default)]
+    pub max_gas_amount: Option<String>,
+    #[serde(default)]
+    pub gas_unit_price: Option<String>,
+    #[serde(default)]
+    pub expiration_timestamp_secs: Option<String>,
     pub payload: Payload,
     pub signature: Signature,
 }
@@ -699,9 +696,11 @@ pub struct GenesisTransaction {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BlockMetadataTransaction {
     pub id: String,
+    pub epoch: String,
     pub round: String,
-    pub previous_block_votes_bitvec: Vec<u8>,
     pub proposer: String,
+    pub failed_proposer_indices: Vec<u64>,
+    pub previous_block_votes_bitvec: Vec<u8>,
     pub timestamp: String,
     pub events: Vec<Event>,
 }
@@ -739,11 +738,36 @@ pub struct Code {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Signature {
-    #[serde(rename = "type")]
-    pub signature_type: String,
-    pub public_key: String,
-    pub signature: String,
+#[serde(tag = "type")]
+pub enum Signature {
+    #[serde(rename = "ed25519_signature")]
+    Ed25519 {
+        public_key: String,
+        signature: String,
+    },
+    #[serde(rename = "multi_ed25519_signature")]
+    MultiEd25519 {
+        public_keys: Vec<String>,
+        signatures: Vec<String>,
+        threshold: u8,
+    },
+    #[serde(rename = "single_key_signature")]
+    SingleKey {
+        public_key: String,
+        signature: String,
+    },
+    #[serde(rename = "multi_key_signature")]
+    MultiKey {
+        public_keys: Vec<String>,
+        signatures: Vec<String>,
+        threshold: u8,
+    },
+    #[serde(rename = "fee_payer_signature")]
+    FeePayer {
+        sender: Box<Signature>,
+        #[serde(default)]
+        fee_payer: Option<Box<Signature>>,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -761,10 +785,11 @@ pub struct Guid {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+
 pub struct WriteSetChange {
     #[serde(rename = "type")]
     pub change_type: String,
-    pub address: String,
+    pub address: Option<String>,
     pub state_key_hash: String,
     pub data: Option<Value>,
     pub handle: Option<String>,
@@ -805,7 +830,7 @@ pub struct ResourceChanges {
     pub table_items_deleted: usize,
 }
 
-impl Transaction {
+impl TransactionInfo {
     /// Check if the transaction was successful
     pub fn is_successful(&self) -> bool {
         self.success
@@ -813,7 +838,7 @@ impl Transaction {
 
     /// Get transaction timestamp
     pub fn get_timestamp(&self) -> Option<u64> {
-        self.timestamp.parse().ok()
+        self.timestamp.clone().unwrap_or(0.to_string()).parse().ok()
     }
 
     /// Get the amount of gas used

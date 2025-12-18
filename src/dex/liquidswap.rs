@@ -1,6 +1,6 @@
 /// Liquidswap Module
 use crate::{
-    AptosClient, event::EventData, global::mainnet::protocol_address::LIQUIDSWAP_PROTOCOL_ADDRESS,
+    Aptos, event::EventData, global::mainnet::protocol_address::LIQUIDSWAP_PROTOCOL_ADDRESS,
     types::ContractCall, wallet::Wallet,
 };
 use serde_json::{Value, json};
@@ -21,13 +21,13 @@ pub struct Liquidswap;
 
 impl Liquidswap {
     /// get swap events
-    pub async fn get_swap_events(client: Arc<AptosClient>) -> Result<Vec<EventData>, String> {
+    pub async fn get_swap_events(client: Arc<Aptos>) -> Result<Vec<EventData>, String> {
         let event_type = format!("{}::router::SwapEvent", LIQUIDSWAP_PROTOCOL_ADDRESS);
         Self::get_recent_events(client, &event_type).await
     }
 
     async fn get_recent_events(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         event_type: &str,
     ) -> Result<Vec<EventData>, String> {
         let mut all_events = Vec::new();
@@ -61,7 +61,7 @@ impl Liquidswap {
 
     /// add liquidity
     pub async fn add_liquidity(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         coin_x: &str,
         coin_y: &str,
@@ -90,7 +90,7 @@ impl Liquidswap {
 
     /// remove liquidity
     pub async fn remove_liquidity(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         coin_x: &str,
         coin_y: &str,
@@ -109,7 +109,7 @@ impl Liquidswap {
     }
 
     pub async fn swap_exact_input(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         from_coin: &str,
         to_coin: &str,
@@ -133,7 +133,7 @@ impl Liquidswap {
     }
 
     pub async fn swap_exact_output(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         from_coin: &str,
         to_coin: &str,
@@ -158,7 +158,7 @@ impl Liquidswap {
 
     /// get pool info
     pub async fn get_pool_info(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         coin_x: &str,
         coin_y: &str,
     ) -> Result<Value, String> {
@@ -175,7 +175,7 @@ impl Liquidswap {
 
     /// listen Liquidswap events
     pub async fn listen_events(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         event_sender: broadcast::Sender<EventData>,
         event_types: Vec<LiquidswapEventType>,
     ) -> Result<(), String> {
@@ -229,7 +229,7 @@ impl Liquidswap {
 
     /// get price
     pub async fn get_price(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         from_coin: &str,
         to_coin: &str,
         amount: u64,

@@ -1,5 +1,5 @@
 use crate::{
-    AptosClient, event::EventData, global::mainnet::protocol_address::AUXSWAP_PROTOCOL_ADDRESS,
+    Aptos, event::EventData, global::mainnet::protocol_address::AUXSWAP_PROTOCOL_ADDRESS,
     types::ContractCall, wallet::Wallet,
 };
 use serde_json::{Value, json};
@@ -12,13 +12,13 @@ pub struct AuxExchange;
 impl AuxExchange {
      /// get swap events
     pub async fn get_swap_events(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
     ) -> Result<Vec<EventData>, String> {
         let event_type = format!("{}::amm::SwapEvent", AUXSWAP_PROTOCOL_ADDRESS);
         Self::get_recent_events(client, &event_type).await
     }
     async fn get_recent_events(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         event_type: &str,
     ) -> Result<Vec<EventData>, String> {
         let mut all_events = Vec::new();
@@ -44,7 +44,7 @@ impl AuxExchange {
     
     /// listen Aux Exchange events
     pub async fn listen_events(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         event_sender: broadcast::Sender<EventData>,
         event_types: Vec<AuxEventType>,
     ) -> Result<(), String> {
@@ -99,7 +99,7 @@ impl AuxExchange {
     }
 
     pub async fn swap_exact_input(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         from_coin: &str,
         to_coin: &str,
@@ -123,7 +123,7 @@ impl AuxExchange {
     }
 
     pub async fn swap_exact_output(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         from_coin: &str,
         to_coin: &str,
@@ -148,7 +148,7 @@ impl AuxExchange {
 
     /// add liquidity
     pub async fn add_liquidity(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         coin_a: &str,
         coin_b: &str,
@@ -175,7 +175,7 @@ impl AuxExchange {
 
     /// remove liquidity
     pub async fn remove_liquidity(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         wallet: Arc<Wallet>,
         coin_a: &str,
         coin_b: &str,
@@ -202,7 +202,7 @@ impl AuxExchange {
 
     /// get pool info
     pub async fn get_pool_info(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         coin_a: &str,
         coin_b: &str,
     ) -> Result<Value, String> {
@@ -220,7 +220,7 @@ impl AuxExchange {
 
     /// get price
     pub async fn get_price(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         from_coin: &str,
         to_coin: &str,
         amount: u64,
@@ -245,7 +245,7 @@ impl AuxExchange {
 
     /// get user liquidity
     pub async fn get_user_liquidity(
-        client: Arc<AptosClient>,
+        client: Arc<Aptos>,
         user_address: &str,
         coin_a: &str,
         coin_b: &str,
